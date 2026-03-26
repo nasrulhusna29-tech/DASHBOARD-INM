@@ -10,12 +10,11 @@
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
     
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; color: #212529; }
-        .navbar { background: #1e3c72 !important; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; }
+        .navbar { background: #1e3c72 !important; }
         .card { border: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        .filter-section { background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; }
         .stat-value { font-size: 2rem; font-weight: 700; color: #1e3c72; }
-        .chart-container { height: 350px; position: relative; }
+        .chart-container { height: 300px; position: relative; }
     </style>
 </head>
 <body>
@@ -27,8 +26,7 @@
     </nav>
 
     <div class="container-fluid px-4">
-        
-        <div class="filter-section">
+        <div class="card p-3 mb-4">
             <div class="row g-3">
                 <div class="col-md-3">
                     <label class="form-label fw-bold">Bulan & Tahun</label>
@@ -36,9 +34,7 @@
                 </div>
                 <div class="col-md-3">
                     <label class="form-label fw-bold">Ruangan</label>
-                    <select id="filter-ruangan" class="form-select">
-                        <option value="">Semua Ruangan</option>
-                    </select>
+                    <select id="filter-ruangan" class="form-select"><option value="">Semua Ruangan</option></select>
                 </div>
                 <div class="col-md-3">
                     <label class="form-label fw-bold">Jenis Kepatuhan</label>
@@ -56,36 +52,27 @@
         </div>
 
         <div class="row">
-            <div class="col-md-4">
+            <div class="col-md-6">
                 <div class="card text-center p-4">
                     <p class="text-muted mb-1">Total Observasi</p>
                     <div id="total-obs" class="stat-value">0</div>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-6">
                 <div class="card text-center p-4">
                     <p class="text-muted mb-1">Rata-rata Kepatuhan</p>
                     <div id="avg-compliance" class="stat-value text-success">0%</div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card p-3">
-                    <div class="chart-container" style="height: 100px;">
-                        <canvas id="miniChart"></canvas>
-                    </div>
                 </div>
             </div>
         </div>
 
         <div class="card p-4">
             <h5 class="fw-bold mb-4">Persentase Kepatuhan per Indikator</h5>
-            <div class="chart-container">
-                <canvas id="mainChart"></canvas>
-            </div>
+            <div class="chart-container"><canvas id="mainChart"></canvas></div>
         </div>
 
         <div class="card p-4">
-            <h5 class="fw-bold mb-3 text-primary">Data Detail Pemantauan</h5>
+            <h5 class="fw-bold mb-3 text-primary">Data Detail</h5>
             <div class="table-responsive">
                 <table id="inmTable" class="table table-hover w-100 border"></table>
             </div>
@@ -94,6 +81,7 @@
 
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 
@@ -104,26 +92,26 @@
         let mainChart;
         let dataTable;
 
-        async function init() {
-            try {
-                const response = await fetch(csvUrl);
-                const text = await response.text();
-                const rows = text.split('\n').map(r => r.split(',').map(c => c.replace(/"/g, '').trim()));
-                
-                tableHeaders = rows;
-                rawData = rows.slice(1).filter(r => r.length > 1);
+        function init() {
+            Papa.parse(csvUrl, {
+                download: true,
+                header: false,
+                complete: function(results) {
+                    const rows = results.data;
+                    tableHeaders = rows;
+                    rawData = rows.slice(1).filter(r => r.length > 1);
 
-                // Isi filter ruangan
-                const rooms = [...new Set(rawData.map(r => r))].sort();
-                const roomSelect = document.getElementById('filter-ruangan');
-                rooms.forEach(room => {
-                    if(room) roomSelect.add(new Option(room, room));
-                });
+                    // Dropdown Ruangan
+                    const rooms = [...new Set(rawData.map(r => r))].filter(Boolean).sort();
+                    const roomSelect = document.getElementById('filter-ruangan');
+                    rooms.forEach(room => roomSelect.add(new Option(room, room)));
 
-                applyFilters();
-            } catch (e) {
-                alert("Gagal memuat data. Pastikan link CSV benar.");
-            }
+                    applyFilters();
+                },
+                error: function(err) {
+                    alert("Gagal memuat data Google Sheets. Cek apakah file sudah di-Publish ke Web sebagai CSV.");
+                }
+            });
         }
 
         function applyFilters() {
@@ -132,7 +120,8 @@
             const fInd = document.getElementById('filter-indikator').value;
 
             const filtered = rawData.filter(row => {
-                const rowDate = new Date(row);
+                const dateParts = row.split(' ').split('/'); // Menangani M/D/YYYY
+                const rowDate = new Date(dateParts, dateParts - 1, dateParts);
                 const rowMonthYear = rowDate.getFullYear() + '-' + String(rowDate.getMonth() + 1).padStart(2, '0');
                 
                 return (!fDate || rowMonthYear === fDate) &&
@@ -149,18 +138,16 @@
 
             data.forEach(row => {
                 const ind = row;
-                const kepatuhan = row ? row.toLowerCase() : '';
+                const kep = (row || "").toLowerCase().trim();
                 if(!stats[ind]) stats[ind] = { ya: 0, total: 0 };
-                if(kepatuhan === 'ya') { stats[ind].ya++; totalYa++; }
+                if(kep === 'ya') { stats[ind].ya++; totalYa++; }
                 stats[ind].total++;
             });
 
-            const total = data.length;
-            document.getElementById('total-obs').innerText = total;
-            const percent = total > 0 ? ((totalYa/total)*100).toFixed(1) : 0;
+            document.getElementById('total-obs').innerText = data.length;
+            const percent = data.length > 0 ? ((totalYa/data.length)*100).toFixed(1) : 0;
             document.getElementById('avg-compliance').innerText = percent + '%';
 
-            // Update Chart
             const labels = Object.keys(stats);
             const values = labels.map(l => ((stats[l].ya/stats[l].total)*100).toFixed(1));
 
@@ -174,13 +161,13 @@
                 options: { responsive: true, maintainAspectRatio: false, scales: { y: { max: 100 } } }
             });
 
-            // Update Table
             if(dataTable) dataTable.destroy();
             $('#inmTable').empty();
             dataTable = $('#inmTable').DataTable({
                 data: data,
                 columns: tableHeaders.map(h => ({ title: h })),
-                pageLength: 5
+                pageLength: 5,
+                language: { search: "Cari:" }
             });
         }
 
