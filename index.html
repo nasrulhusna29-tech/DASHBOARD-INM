@@ -10,80 +10,140 @@
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
     
     <style>
-        body { 
-            font-family: 'Inter', sans-serif; 
-            background-color: #f4f7f6; 
-            color: #333;
-        }
-        .navbar {
-            background: #2c3e50 !important;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .card {
-            border: none;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            margin-bottom: 20px;
-        }
-        .stat-card {
-            transition: transform 0.2s;
-            border-left: 5px solid #4CAF50;
-        }
-        .stat-card:hover { transform: translateY(-5px); }
-        .table-container {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-        }
-        table.dataTable thead th {
-            background-color: #f8f9fa;
-            color: #2c3e50;
-            font-weight: 600;
-            text-transform: uppercase;
-            font-size: 0.75rem;
-            letter-spacing: 0.05em;
-        }
-        .badge-kepatuhan {
-            padding: 5px 10px;
-            border-radius: 20px;
-            font-weight: 600;
-        }
+        body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; color: #1a1a1b; }
+        .navbar { background: linear-gradient(90deg, #1e3c72 0%, #2a5298 100%) !important; }
+        .card { border: none; border-radius: 15px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .stat-card { border-top: 5px solid #3498db; transition: 0.3s; }
+        .stat-card:hover { transform: scale(1.02); }
+        .chart-container { height: 300px; position: relative; }
+        .table-responsive { font-size: 0.85rem; }
+        .badge-success { background-color: #28a745; color: white; padding: 4px 8px; border-radius: 5px; }
     </style>
 </head>
 <body>
 
-    <nav class="navbar navbar-dark mb-4">
-        <div class="container-fluid">
-            <span class="navbar-brand mb-0 h1">📊 Dashboard Pemantauan INM Puskesmas Cilincing</span>
+    <nav class="navbar navbar-dark mb-4 py-3">
+        <div class="container-fluid px-4">
+            <span class="navbar-brand mb-0 h1">📊 Dashboard Monitoring INM Puskesmas Cilincing</span>
         </div>
     </nav>
 
-    <div class="container-fluid">
-        <div class="row mb-4">
-            <div class="col-md-3">
-                <div class="card stat-card p-3">
-                    <small class="text-muted">Total Data</small>
-                    <h3 id="total-data">...</h3>
+    <div class="container-fluid px-4">
+        <div class="row">
+            <div class="col-lg-3">
+                <div class="card stat-card p-3 mb-3">
+                    <p class="text-muted mb-1">Total Observasi</p>
+                    <h2 id="total-obs" class="fw-bold">0</h2>
+                </div>
+                <div class="card stat-card p-3" style="border-top-color: #2ecc71;">
+                    <p class="text-muted mb-1">Tingkat Kepatuhan Rata-rata</p>
+                    <h2 id="avg-compliance" class="fw-bold text-success">0%</h2>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="card stat-card p-3" style="border-left-color: #3498db;">
-                    <small class="text-muted">Terakhir Update</small>
-                    <h3 id="last-update" style="font-size: 1.2rem; padding-top: 10px;">...</h3>
+            <div class="col-lg-9">
+                <div class="card p-3">
+                    <h6 class="fw-bold mb-3 text-center">Tingkat Kepatuhan per Indikator (%)</h6>
+                    <div class="chart-container">
+                        <canvas id="complianceChart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="card">
+        <div class="card mt-2">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-bold text-primary">Data Mentah Pemantauan</h5>
+            </div>
             <div class="card-body">
-                <h5 class="card-title mb-4">Rincian Data Pemantauan</h5>
                 <div class="table-responsive">
-                    <table id="inmTable" class="table table-hover w-100">
-                        </table>
+                    <table id="inmTable" class="table table-striped w-100"></table>
                 </div>
             </div>
         </div>
     </div>
 
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+    <script>
+        const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS6y_Z-FayYd3y_FmSInUunP7eYV4W5yB-lK_zL6-D6yL2B-V9e_v_r_r/pub?gid=935629840&single=true&output=csv';
+
+        async function initDashboard() {
+            try {
+                const res = await fetch(csvUrl);
+                const csvData = await res.text();
+                const rows = csvData.split('\n').map(r => r.split(','));
+                
+                const headers = rows.map(h => h.replace(/"/g, ''));
+                const data = rows.slice(1).filter(r => r.length > 1);
+
+                // --- LOGIKA ANALISA DATA UNTUK GRAFIK ---
+                const stats = {}; 
+                let totalYa = 0;
+                let validData = 0;
+
+                data.forEach(row => {
+                    const indikator = row ? row.replace(/"/g, '') : 'N/A';
+                    const kepatuhan = row ? row.replace(/"/g, '').toLowerCase().trim() : '';
+
+                    if (!stats[indikator]) stats[indikator] = { ya: 0, total: 0 };
+                    
+                    if (kepatuhan === 'ya') {
+                        stats[indikator].ya++;
+                        totalYa++;
+                    }
+                    stats[indikator].total++;
+                    validData++;
+                });
+
+                // Update Ringkasan Statis
+                document.getElementById('total-obs').innerText = validData;
+                const avg = ((totalYa / validData) * 100).toFixed(1);
+                document.getElementById('avg-compliance').innerText = avg + '%';
+
+                // Siapkan Data Grafik
+                const chartLabels = Object.keys(stats);
+                const chartValues = chartLabels.map(label => 
+                    ((stats[label].ya / stats[label].total) * 100).toFixed(1)
+                );
+
+                // --- RENDER GRAFIK ---
+                const ctx = document.getElementById('complianceChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: chartLabels,
+                        datasets: [{
+                            label: '% Kepatuhan',
+                            data: chartValues,
+                            backgroundColor: '#3498db',
+                            borderRadius: 8
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: { y: { beginAtZero: true, max: 100 } }
+                    }
+                });
+
+                // --- RENDER TABEL ---
+                $('#inmTable').DataTable({
+                    data: data,
+                    columns: headers.map(h => ({ title: h })),
+                    pageLength: 5,
+                    order: [[0, 'desc']]
+                });
+
+            } catch (err) {
+                console.error(err);
+                alert('Gagal mengambil data dari Google Sheets!');
+            }
+        }
+
+        $(document).ready(initDashboard);
+    </script>
+</body>
+</html>
