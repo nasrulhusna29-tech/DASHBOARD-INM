@@ -3,241 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Mutu INM - Puskesmas Cilincing</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <title>Data Pemantauan Mutu Puskesmas Cilincing</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
+        th { background-color: #4CAF50; color: white; }
+        tr:nth-child(even) { background-color: #f2f2f2; }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-900">
+<body>
 
-    <nav class="bg-white border-b border-slate-200 sticky top-0 z-50">
-        <div class="container mx-auto px-6 py-4 flex flex-wrap items-center justify-between gap-4">
-            <div class="flex items-center gap-4">
-                <div class="bg-emerald-600 p-2 rounded-lg shadow-emerald-100 shadow-lg">
-                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
-                </div>
-                <div>
-                    <h1 class="text-xl font-extrabold tracking-tight text-slate-800">Monitoring Mutu INM</h1>
-                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Puskesmas Cilincing</p>
-                </div>
-            </div>
-            <select id="indicatorSelector" class="bg-slate-100 border-none text-slate-700 text-sm font-bold rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-emerald-500 cursor-pointer shadow-inner outline-none">
-                <option value="kkt">1. Kepatuhan Kebersihan Tangan</option>
-                <option value="apd">2. Kepatuhan Penggunaan APD</option>
-                <option value="identifikasi">3. Identifikasi Pasien</option>
-            </select>
-        </div>
-    </nav>
-
-    <main class="container mx-auto px-6 py-8">
-        
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
-            <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 text-center">
-                <span class="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Capaian Saat Ini</span>
-                <div id="current-percent" class="text-4xl font-black text-emerald-600 my-1">0%</div>
-                <p id="indicator-name-summary" class="text-[11px] font-semibold text-slate-500 truncate italic">Memuat...</p>
-            </div>
-            <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-                <span class="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Target & Status</span>
-                <div class="flex justify-between items-center mt-2">
-                    <span id="target-value" class="font-bold text-slate-800 text-lg">--%</span>
-                    <span id="status-badge" class="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter bg-slate-100">...</span>
-                </div>
-            </div>
-            <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-                <span class="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Total Sampel Valid</span>
-                <div id="total-samples" class="text-2xl font-black text-slate-800 mt-1">--</div>
-            </div>
-            <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 text-rose-600">
-                <span class="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Temuan Masalah</span>
-                <div id="noncompliant-count" class="text-2xl font-black mt-1">--</div>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
-            <div class="lg:col-span-2 bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
-                <h3 class="text-sm font-extrabold text-slate-800 mb-6 uppercase tracking-wider">Tren Kepatuhan Per Unit</h3>
-                <div class="h-[350px]">
-                    <canvas id="mutuChart"></canvas>
-                </div>
-            </div>
-
-            <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 flex flex-col">
-                <div class="flex items-center gap-2 mb-6 text-rose-500">
-                    <div class="w-2 h-6 bg-rose-500 rounded-full"></div>
-                    <h3 class="text-sm font-extrabold text-slate-800 uppercase tracking-wider">10 Besar Tidak Patuh</h3>
-                </div>
-                <div id="top-failure-list" class="space-y-4 flex-grow">
-                    </div>
-                <p class="mt-6 text-[10px] text-slate-400 italic leading-relaxed">*Mengabaikan data kosong. Urutan berdasarkan jumlah frekuensi ketidakpatuhan.</p>
-            </div>
-        </div>
-
-        <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
-            <div class="px-8 py-5 bg-slate-50 border-b border-slate-100">
-                <h3 class="text-sm font-extrabold text-slate-800 uppercase tracking-wider">Daftar Temuan Kendala (Bukan Data Kosong)</h3>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left">
-                    <thead class="bg-slate-50 text-slate-400 text-[10px] font-bold uppercase tracking-widest border-b border-slate-100">
-                        <tr>
-                            <th class="px-8 py-4 w-1/3">Unit Kerja</th>
-                            <th class="px-8 py-4">Alasan / Masalah</th>
-                        </tr>
-                    </thead>
-                    <tbody id="problem-table-body" class="divide-y divide-slate-100 text-xs text-slate-600">
-                        </tbody>
-                </table>
-            </div>
-        </div>
-    </main>
+    <h2>Tabel Pemantauan Indikator Nasional Mutu</h2>
+    <div id="table-container">Memuat data...</div>
 
     <script>
-        const SHEET_ID = '136P0ouYEC990HEURCtzUARcdc-NdprIQHhspQzuIV0Y';
-        const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`;
+        // Ganti URL ini dengan URL CSV yang Anda dapatkan dari "Publish to web"
+        const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS6y_Z-FayYd3y_FmSInUunP7eYV4W5yB-lK_zL6-D6yL2B-V9e_v_r_r/pub?gid=935629840&single=true&output=csv';
 
-        let rawData = [];
-        let myChart = null;
-
-        const config = {
-            'kkt': { name: 'Kebersihan Tangan', target: 85, complVal: 'Dilakukan', col: 'Apakah Dilakukan' },
-            'apd': { name: 'Penggunaan APD', target: 100, complVal: 'Lengkap', col: 'Apakah APD digunakan secara lengkap ?' },
-            'identifikasi': { name: 'Identifikasi Pasien', target: 100, complVal: 'Ya', col: 'Apakah tindakan intervensi pasien dilakukan identifikasi dengan benar ?' }
-        };
-
-        async function init() {
+        async function fetchSheet() {
             try {
-                const res = await fetch(CSV_URL);
-                const text = await res.text();
-                Papa.parse(text, {
-                    header: true,
-                    skipEmptyLines: true,
-                    complete: (results) => {
-                        rawData = results.data.map(r => {
-                            let clean = {};
-                            for (let k in r) clean[k.trim()] = r[k];
-                            return clean;
-                        }).filter(r => r['Unit Kerja']);
-                        render();
-                    }
+                const response = await fetch(csvUrl);
+                const data = await response.text();
+                const rows = data.split('\n').map(row => row.split(','));
+                
+                let tableHtml = '<table><thead><tr>';
+                
+                // Header (Timestamp, Tanggal, Observer, dll)
+                rows.forEach(header => {
+                    tableHtml += `<th>${header}</th>`;
                 });
-            } catch (e) { console.error("Error fetching data:", e); }
+                tableHtml += '</tr></thead><tbody>';
+
+                // Isi Data
+                for (let i = 1; i < rows.length; i++) {
+                    if (rows[i].length < 2) continue; // Lewati baris kosong
+                    tableHtml += '<tr>';
+                    rows[i].forEach(cell => {
+                        tableHtml += `<td>${cell}</td>`;
+                    });
+                    tableHtml += '</tr>';
+                }
+                tableHtml += '</tbody></table>';
+                
+                document.getElementById('table-container').innerHTML = tableHtml;
+            } catch (error) {
+                document.getElementById('table-container').innerHTML = 'Gagal memuat data.';
+                console.error(error);
+            }
         }
 
-        function render() {
-            const key = document.getElementById('indicatorSelector').value;
-            const cfg = config[key];
-            let total = 0, compl = 0;
-            let unitStats = {};
-            let failuresByUnit = {}; 
-            let tableHTML = "";
-
-            rawData.forEach(row => {
-                const val = row[cfg.col];
-                const unit = row['Unit Kerja'];
-
-                // CRITICAL FIX: Abaikan jika kolom indikator kosong atau hanya berisi spasi
-                if (val && val.trim() !== "" && unit) {
-                    total++;
-                    if (!unitStats[unit]) unitStats[unit] = { c: 0, t: 0 };
-                    unitStats[unit].t++;
-
-                    if (val.toString().toLowerCase() === cfg.complVal.toLowerCase()) {
-                        compl++;
-                        unitStats[unit].c++;
-                    } else {
-                        failuresByUnit[unit] = (failuresByUnit[unit] || 0) + 1;
-                        tableHTML += `<tr class="hover:bg-slate-50 transition-colors">
-                            <td class="px-8 py-4 font-bold text-emerald-700">${unit}</td>
-                            <td class="px-8 py-4">${row['Alasan / Masalah'] || '-'}</td>
-                        </tr>`;
-                    }
-                }
-            });
-
-            // Summary UI
-            const perc = total > 0 ? ((compl / total) * 100).toFixed(1) : 0;
-            document.getElementById('current-percent').innerText = perc + '%';
-            document.getElementById('indicator-name-summary').innerText = cfg.name;
-            document.getElementById('target-value').innerText = cfg.target + '%';
-            document.getElementById('total-samples').innerText = total;
-            document.getElementById('noncompliant-count').innerText = total - compl;
-
-            // Badge Logic
-            const badge = document.getElementById('status-badge');
-            if (parseFloat(perc) >= cfg.target) {
-                badge.innerText = "Tercapai";
-                badge.className = "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter bg-emerald-100 text-emerald-600";
-            } else {
-                badge.innerText = "Tidak Tercapai";
-                badge.className = "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter bg-rose-100 text-rose-600";
-            }
-
-            // Ranking Logic (Fixed Sort)
-            const top10 = Object.entries(failuresByUnit)
-                .sort((a, b) => b - a) 
-                .slice(0, 10);
-
-            let topHTML = "";
-            if (top10.length > 0) {
-                top10.forEach(([name, count], index) => {
-                    topHTML += `
-                    <div class="flex items-center justify-between group p-1">
-                        <div class="flex items-center gap-3">
-                            <span class="w-5 h-5 flex items-center justify-center bg-slate-100 text-[10px] font-bold rounded text-slate-400 group-hover:bg-rose-500 group-hover:text-white transition-all">${index + 1}</span>
-                            <span class="text-xs font-semibold text-slate-700 truncate w-32 md:w-48">${name}</span>
-                        </div>
-                        <span class="text-[10px] font-black text-rose-500 bg-rose-50 px-2 py-1 rounded-full">${count}</span>
-                    </div>`;
-                });
-            } else {
-                topHTML = `<div class="py-10 text-center text-emerald-600 font-bold text-xs italic">Semua data patuh.</div>`;
-            }
-            document.getElementById('top-failure-list').innerHTML = topHTML;
-            document.getElementById('problem-table-body').innerHTML = tableHTML || '<tr><td colspan="2" class="p-10 text-center italic text-slate-400">Tidak ada ketidakpatuhan ditemukan.</td></tr>';
-
-            // Chart Rendering
-            if (myChart) myChart.destroy();
-            const labels = Object.keys(unitStats);
-            const ctx = document.getElementById('mutuChart').getContext('2d');
-            myChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: '% Kepatuhan',
-                        data: labels.map(l => ((unitStats[l].c / unitStats[l].t) * 100).toFixed(1)),
-                        backgroundColor: '#10b981',
-                        borderRadius: 6,
-                        barThickness: 25
-                    }, {
-                        label: 'Target',
-                        data: Array(labels.length).fill(cfg.target),
-                        type: 'line',
-                        borderColor: '#f43f5e',
-                        borderWidth: 2,
-                        pointRadius: 0,
-                        borderDash:
-                    }]
-                },
-                options: { 
-                    responsive: true, 
-                    maintainAspectRatio: false, 
-                    plugins: { legend: { display: false } },
-                    scales: { 
-                        y: { beginAtZero: true, max: 100, grid: { color: '#f1f5f9' } },
-                        x: { grid: { display: false } }
-                    }
-                }
-            });
-        }
-
-        document.getElementById('indicatorSelector').addEventListener('change', render);
-        window.onload = init;
+        fetchSheet();
     </script>
 </body>
 </html>
