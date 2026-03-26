@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard INM - Puskesmas Cilincing</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+</head>
+<body class="bg-gray-100 font-sans">
+
+    <nav class="bg-blue-600 p-4 text-white shadow-lg text-center">
+        <h1 class="text-2xl font-bold uppercase tracking-wide">Monitoring Indikator Nasional Mutu</h1>
+        <p class="text-sm opacity-80">Puskesmas Cilincing | Update Real-time</p>
+    </nav>
+
+    <div class="container mx-auto p-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-xl shadow-md border-l-4 border-green-500 text-center">
+                <h2 class="text-gray-500 uppercase text-xs font-bold">Kepatuhan Kebersihan Tangan</h2>
+                <p id="kkt-percent" class="text-4xl font-extrabold text-gray-800">0%</p>
+                <p class="text-xs text-green-600 mt-2">Target Nasional: 85%</p>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-500 text-center">
+                <h2 class="text-gray-500 uppercase text-xs font-bold">Kepatuhan Identifikasi Pasien</h2>
+                <p id="ident-percent" class="text-4xl font-extrabold text-gray-800">0%</p>
+                <p class="text-xs text-blue-600 mt-2">Target Nasional: 100%</p>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-xl shadow-md mb-8">
+            <h3 class="text-lg font-semibold mb-4 text-gray-700">Tren Kepatuhan Per Unit</h3>
+            <canvas id="mutuChart" height="100"></canvas>
+        </div>
+
+        <div class="bg-white p-6 rounded-xl shadow-md overflow-x-auto">
+            <h3 class="text-lg font-semibold mb-4 text-red-600">Daftar Temuan / Masalah</h3>
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-gray-50 border-b">
+                        <th class="p-3 text-sm font-bold">Unit Kerja</th>
+                        <th class="p-3 text-sm font-bold">Masalah / Kendala</th>
+                    </tr>
+                </thead>
+                <tbody id="problem-table-body" class="text-sm">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const SHEET_ID = '136P0ouYEC990HEURCtzUARcdc-NdprIQHhspQzuIV0Y';
+        const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`;
+
+        async function fetchData() {
+            const response = await fetch(CSV_URL);
+            const data = await response.text();
+            
+            Papa.parse(data, {
+                header: true,
+                complete: function(results) {
+                    processData(results.data);
+                }
+            });
+        }
+
+        function processData(data) {
+            let totalKKT = 0;
+            let totalIdent = 0;
+            let validKKT = 0;
+            let validIdent = 0;
+            let problems = "";
+
+            data.forEach(row => {
+                // Hitung KKT
+                if (row['Apakah Dilakukan']) {
+                    validKKT++;
+                    if (row['Apakah Dilakukan'] === 'Dilakukan') totalKKT++;
+                    else {
+                        // Tambah ke tabel masalah jika "Tidak Dilakukan"
+                        problems += `<tr class="border-b">
+                            <td class="p-3 font-medium text-blue-600">${row['Unit Kerja']}</td>
+                            <td class="p-3 text-gray-600">${row['Alasan / Masalah'] || 'Tanpa Keterangan'}</td>
+                        </tr>`;
+                    }
+                }
+                
+                // Hitung Identifikasi Pasien
+                if (row['Apakah tindakan intervensi pasien dilakukan identifikasi dengan benar ?']) {
+                    validIdent++;
+                    if (row['Apakah tindakan intervensi pasien dilakukan identifikasi dengan benar ?'] === 'Ya') totalIdent++;
+                }
+            });
+
+            // Update UI
+            const kktPerc = (totalKKT / validKKT * 100).toFixed(1);
+            const identPerc = (totalIdent / validIdent * 100).toFixed(1);
+
+            document.getElementById('kkt-percent').innerText = kktPerc + '%';
+            document.getElementById('ident-percent').innerText = identPerc + '%';
+            document.getElementById('problem-table-body').innerHTML = problems;
+
+            renderChart(kktPerc, identPerc);
+        }
+
+        function renderChart(kkt, ident) {
+            const ctx = document.getElementById('mutuChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Kebersihan Tangan', 'Identifikasi Pasien'],
+                    datasets: [{
+                        label: '% Kepatuhan',
+                        data: [kkt, ident],
+                        backgroundColor: ['#10b981', '#3b82f6'],
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    scales: { y: { beginAtZero: true, max: 100 } }
+                }
+            });
+        }
+
+        fetchData();
+    </script>
+</body>
+</html>
