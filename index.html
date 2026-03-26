@@ -19,24 +19,24 @@
 <body>
 
 <nav class="navbar navbar-dark mb-4 py-3">
-    <div class="container-fluid px-4">
-        <span class="navbar-brand mb-0 h1">📊 Dashboard Monitoring INM Puskesmas Cilincing</span>
+    <div class="container-fluid px-4 text-center">
+        <span class="navbar-brand mb-0 h1 text-center w-100">📊 DASHBOARD MONITORING INM PUSKESMAS CILINCING</span>
     </div>
 </nav>
 
 <div class="container-fluid px-4">
-    <div class="filter-section">
+    <div class="filter-section shadow-sm">
         <div class="row g-3">
             <div class="col-md-3">
-                <label class="form-label small fw-bold">Bulan & Tahun</label>
+                <label class="form-label small fw-bold">📅 Bulan & Tahun</label>
                 <input type="month" id="filter-date" class="form-control">
             </div>
             <div class="col-md-3">
-                <label class="form-label small fw-bold">Ruangan</label>
+                <label class="form-label small fw-bold">🏥 Pilih Ruangan</label>
                 <select id="filter-ruangan" class="form-select"><option value="">Semua Ruangan</option></select>
             </div>
             <div class="col-md-3">
-                <label class="form-label small fw-bold">Indikator</label>
+                <label class="form-label small fw-bold">📝 Pilih Indikator</label>
                 <select id="filter-indikator" class="form-select"><option value="">Semua Indikator</option></select>
             </div>
             <div class="col-md-3 d-flex align-items-end">
@@ -46,16 +46,16 @@
     </div>
 
     <div class="row">
-        <div class="col-md-6"><div class="card text-center p-4"><p class="text-muted mb-0">Total Indikator Teramati</p><div id="total-obs" class="stat-value">0</div></div></div>
-        <div class="col-md-6"><div class="card text-center p-4"><p class="text-muted mb-0">Rata-rata Kepatuhan</p><div id="avg-compliance" class="stat-value text-primary">0%</div></div></div>
+        <div class="col-md-6"><div class="card text-center p-4"><p class="text-muted mb-0">Total Observasi</p><div id="total-obs" class="stat-value">0</div></div></div>
+        <div class="col-md-6"><div class="card text-center p-4"><p class="text-muted mb-0">Rata-rata Kepatuhan</p><div id="avg-compliance" class="stat-value text-success">0%</div></div></div>
     </div>
 
-    <div class="card p-4">
+    <div class="card p-4 shadow-sm">
         <h6 class="fw-bold mb-4 text-center">Persentase Kepatuhan per Indikator (%)</h6>
         <div class="chart-container"><canvas id="mainChart"></canvas></div>
     </div>
 
-    <div class="card p-0 overflow-hidden">
+    <div class="card p-0 overflow-hidden shadow-sm">
         <div class="table-responsive p-3"><table id="inmTable" class="table table-hover w-100"></table></div>
     </div>
 </div>
@@ -74,30 +74,41 @@
     let mainChart;
     let dataTable;
 
-    // INDEKS BERDASARKAN KETERANGAN ANDA
-    const COL_TGL = 2;       // Kolom B
-    const COL_RUANGAN = 5;   // Kolom E
-    const COL_INDIKATOR = 6; // Kolom F
-    const COL_KEPATUHAN =; // Kolom G, H, J, L (Jawaban Ya/Tidak)
+    // INDEKS KOLOM FIX (B=1, E=4, F=5, G=6, H=7, J=9, L=11)
+    const COL_TGL = 1;       
+    const COL_RUANGAN = 4;   
+    const COL_INDIKATOR = 5; 
+    const COL_KEPATUHAN =; 
 
     function init() {
         Papa.parse(csvUrl, {
             download: true,
             header: false,
             skipEmptyLines: true,
+            // AUTO DETECT PEMISAH (Koma atau Titik Koma)
             complete: function(results) {
-                if (results.data.length < 2) return;
+                if (results.data.length < 2) {
+                    alert("Data kosong atau gagal terbaca.");
+                    return;
+                }
                 headers = results.data;
                 rawData = results.data.slice(1);
 
-                // Isi Dropdown
-                const fillDropdown = (id, idx) => {
-                    const list = [...new Set(rawData.map(r => r[idx]))].filter(Boolean).sort();
-                    const el = document.getElementById(id);
-                    list.forEach(item => el.add(new Option(item, item)));
-                };
-                fillDropdown('filter-ruangan', COL_RUANGAN);
-                fillDropdown('filter-indikator', COL_INDIKATOR);
+                // CEK APAKAH DATA TERBACA (Jika kolom Ruangan kosong di semua baris, berarti separator salah)
+                const checkData = rawData[COL_RUANGAN];
+                if (!checkData) {
+                    console.error("Data kolom Ruangan tidak terbaca. Mengecek separator...");
+                }
+
+                // Isi Dropdown Ruangan
+                const roomList = [...new Set(rawData.map(r => r[COL_RUANGAN]))].filter(Boolean).sort();
+                const roomSelect = document.getElementById('filter-ruangan');
+                roomList.forEach(item => roomSelect.add(new Option(item, item)));
+
+                // Isi Dropdown Indikator
+                const indList = [...new Set(rawData.map(r => r[COL_INDIKATOR]))].filter(Boolean).sort();
+                const indSelect = document.getElementById('filter-indikator');
+                indList.forEach(item => indSelect.add(new Option(item, item)));
 
                 applyFilters();
             }
@@ -123,7 +134,7 @@
     }
 
     function updateDisplay(data) {
-        let totalCek = 0;
+        let totalObs = 0;
         let totalYa = 0;
         const stats = {};
 
@@ -131,12 +142,11 @@
             const ind = row[COL_INDIKATOR] || "Lainnya";
             if(!stats[ind]) stats[ind] = { ya: 0, total: 0 };
 
-            // Cek setiap kolom kepatuhan (G, H, J, L)
             COL_KEPATUHAN.forEach(idx => {
                 const val = (row[idx] || "").toLowerCase().trim();
                 if(val === 'ya' || val === 'tidak') {
                     stats[ind].total++;
-                    totalCek++;
+                    totalObs++;
                     if(val === 'ya') {
                         stats[ind].ya++;
                         totalYa++;
@@ -145,8 +155,8 @@
             });
         });
 
-        document.getElementById('total-obs').innerText = totalCek;
-        const avg = totalCek > 0 ? ((totalYa/totalCek)*100).toFixed(1) : 0;
+        document.getElementById('total-obs').innerText = totalObs;
+        const avg = totalObs > 0 ? ((totalYa/totalObs)*100).toFixed(1) : 0;
         document.getElementById('avg-compliance').innerText = avg + '%';
 
         const labels = Object.keys(stats);
@@ -157,9 +167,14 @@
             type: 'bar',
             data: {
                 labels: labels,
-                datasets: [{ label: '% Kepatuhan', data: values, backgroundColor: '#3498db' }]
+                datasets: [{ label: '% Kepatuhan', data: values, backgroundColor: '#3498db', borderRadius: 5 }]
             },
-            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 100 } } }
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false, 
+                scales: { y: { beginAtZero: true, max: 100 } },
+                plugins: { legend: { display: false } }
+            }
         });
 
         if(dataTable) dataTable.destroy();
