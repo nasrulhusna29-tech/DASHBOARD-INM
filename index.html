@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Mutu - Puskesmas Cilincing</title>
+    <title>Dashboard Mutu INM - Puskesmas Cilincing</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
     <style>
-        /* Perbaikan: Import font yang benar, bukan link spreadsheet */
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
     </style>
@@ -50,11 +49,11 @@
                 </div>
             </div>
             <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-                <span class="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Total Sampel</span>
+                <span class="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Total Sampel Valid</span>
                 <div id="total-samples" class="text-2xl font-black text-slate-800 mt-1">--</div>
             </div>
             <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 text-rose-600">
-                <span class="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Total Tidak Patuh</span>
+                <span class="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Temuan Masalah</span>
                 <div id="noncompliant-count" class="text-2xl font-black mt-1">--</div>
             </div>
         </div>
@@ -74,13 +73,13 @@
                 </div>
                 <div id="top-failure-list" class="space-y-4 flex-grow">
                     </div>
-                <p class="mt-6 text-[10px] text-slate-400 italic leading-relaxed">*Urutan berdasarkan jumlah frekuensi "Tidak Patuh" pada indikator yang dipilih.</p>
+                <p class="mt-6 text-[10px] text-slate-400 italic leading-relaxed">*Mengabaikan data kosong. Urutan berdasarkan jumlah frekuensi ketidakpatuhan.</p>
             </div>
         </div>
 
         <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
             <div class="px-8 py-5 bg-slate-50 border-b border-slate-100">
-                <h3 class="text-sm font-extrabold text-slate-800 uppercase tracking-wider">Daftar Temuan Kendala</h3>
+                <h3 class="text-sm font-extrabold text-slate-800 uppercase tracking-wider">Daftar Temuan Kendala (Bukan Data Kosong)</h3>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left">
@@ -98,7 +97,6 @@
     </main>
 
     <script>
-        // Perbaikan: Pastikan Link mengarah ke format ekspor CSV
         const SHEET_ID = '136P0ouYEC990HEURCtzUARcdc-NdprIQHhspQzuIV0Y';
         const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`;
 
@@ -142,12 +140,12 @@
                 const val = row[cfg.col];
                 const unit = row['Unit Kerja'];
 
-                if (val && unit) {
+                // CRITICAL FIX: Abaikan jika kolom indikator kosong atau hanya berisi spasi
+                if (val && val.trim() !== "" && unit) {
                     total++;
                     if (!unitStats[unit]) unitStats[unit] = { c: 0, t: 0 };
                     unitStats[unit].t++;
 
-                    // Case-insensitive check
                     if (val.toString().toLowerCase() === cfg.complVal.toLowerCase()) {
                         compl++;
                         unitStats[unit].c++;
@@ -181,7 +179,7 @@
 
             // Ranking Logic (Fixed Sort)
             const top10 = Object.entries(failuresByUnit)
-                .sort((a, b) => b - a) // Sort by count descending
+                .sort((a, b) => b - a) 
                 .slice(0, 10);
 
             let topHTML = "";
@@ -193,14 +191,14 @@
                             <span class="w-5 h-5 flex items-center justify-center bg-slate-100 text-[10px] font-bold rounded text-slate-400 group-hover:bg-rose-500 group-hover:text-white transition-all">${index + 1}</span>
                             <span class="text-xs font-semibold text-slate-700 truncate w-32 md:w-48">${name}</span>
                         </div>
-                        <span class="text-[10px] font-black text-rose-500 bg-rose-50 px-2 py-1 rounded-full">${count} Temuan</span>
+                        <span class="text-[10px] font-black text-rose-500 bg-rose-50 px-2 py-1 rounded-full">${count}</span>
                     </div>`;
                 });
             } else {
-                topHTML = `<div class="py-10 text-center"><p class="text-xs text-emerald-600 font-bold">✅ Seluruh Unit Patuh</p></div>`;
+                topHTML = `<div class="py-10 text-center text-emerald-600 font-bold text-xs italic">Semua data patuh.</div>`;
             }
             document.getElementById('top-failure-list').innerHTML = topHTML;
-            document.getElementById('problem-table-body').innerHTML = tableHTML || '<tr><td colspan="2" class="p-10 text-center italic text-slate-400">Tidak ada data ketidakpatuhan ditemukan.</td></tr>';
+            document.getElementById('problem-table-body').innerHTML = tableHTML || '<tr><td colspan="2" class="p-10 text-center italic text-slate-400">Tidak ada ketidakpatuhan ditemukan.</td></tr>';
 
             // Chart Rendering
             if (myChart) myChart.destroy();
