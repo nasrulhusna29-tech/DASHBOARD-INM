@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard INM - Puskesmas Cilincing</title>
+    <title>Dashboard Mutu - Puskesmas Cilincing</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
@@ -17,251 +17,210 @@
     <nav class="bg-white border-b border-slate-200 sticky top-0 z-50">
         <div class="container mx-auto px-6 py-4 flex flex-wrap items-center justify-between gap-4">
             <div class="flex items-center gap-4">
-                <div class="bg-blue-600 p-2 rounded-lg shadow-blue-200 shadow-lg">
-                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                <div class="bg-emerald-600 p-2 rounded-lg shadow-emerald-100 shadow-lg">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
                 </div>
                 <div>
-                    <h1 class="text-xl font-extrabold tracking-tight">Dashboard INM</h1>
-                    <p class="text-xs text-slate-500 font-medium uppercase tracking-widest">Puskesmas Cilincing</p>
+                    <h1 class="text-xl font-extrabold tracking-tight">Monitoring Mutu INM</h1>
+                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Puskesmas Cilincing</p>
                 </div>
             </div>
-
-            <div class="flex items-center gap-3">
-                <label class="hidden md:block text-sm font-semibold text-slate-600">Pilih Indikator:</label>
-                <select id="indicatorSelector" class="bg-white border border-slate-300 text-slate-700 text-sm font-bold rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none cursor-pointer shadow-sm transition-all hover:border-blue-400">
-                    <option value="kkt">1. Kepatuhan Kebersihan Tangan</option>
-                    <option value="apd">2. Kepatuhan Penggunaan APD</option>
-                    <option value="identifikasi">3. Identifikasi Pasien</option>
-                </select>
-            </div>
+            <select id="indicatorSelector" class="bg-slate-100 border-none text-slate-700 text-sm font-bold rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-emerald-500 cursor-pointer shadow-inner">
+                <option value="kkt">1. Kepatuhan Kebersihan Tangan</option>
+                <option value="apd">2. Kepatuhan Penggunaan APD</option>
+                <option value="identifikasi">3. Identifikasi Pasien</option>
+            </select>
         </div>
     </nav>
 
     <main class="container mx-auto px-6 py-8">
         
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-            <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 flex flex-col items-center justify-center text-center">
-                <span class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-2">Capaian Real-time</span>
-                <div id="current-percent" class="text-6xl font-black text-blue-600 transition-all">0%</div>
-                <p id="indicator-name-summary" class="text-sm font-semibold text-slate-700 mt-3 italic text-center">Memuat...</p>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
+            <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 text-center">
+                <span class="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Capaian Saat Ini</span>
+                <div id="current-percent" class="text-4xl font-black text-emerald-600 my-1">0%</div>
+                <p id="indicator-name-summary" class="text-[11px] font-semibold text-slate-500 truncate">Memuat...</p>
             </div>
-
-            <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
-                <h3 class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-6">Target Nasional</h3>
-                <div class="space-y-4">
-                    <div class="flex justify-between items-center">
-                        <span class="text-slate-500 font-medium">Standar Target</span>
-                        <span id="target-value" class="font-extrabold text-slate-800">--%</span>
-                    </div>
-                    <div class="flex justify-between items-center pt-4 border-t border-slate-50">
-                        <span class="text-slate-500 font-medium">Status</span>
-                        <span id="status-badge" class="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tighter">Memuat...</span>
-                    </div>
+            <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+                <span class="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Target & Status</span>
+                <div class="flex justify-between items-center mt-2">
+                    <span id="target-value" class="font-bold text-slate-800 text-lg">--%</span>
+                    <span id="status-badge" class="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter bg-slate-100">...</span>
                 </div>
             </div>
-
-            <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
-                <h3 class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-6">Metrik Data</h3>
-                <div class="space-y-4 text-sm">
-                    <div class="flex justify-between">
-                        <span class="text-slate-500">Total Observasi</span>
-                        <span id="total-samples" class="font-bold">--</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-slate-500">Kepatuhan (Ya)</span>
-                        <span id="compliant-count" class="font-bold text-emerald-600">--</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-slate-500">Ketidakpatuhan (Tidak)</span>
-                        <span id="noncompliant-count" class="font-bold text-rose-500">--</span>
-                    </div>
-                </div>
+            <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+                <span class="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Total Sampel</span>
+                <div id="total-samples" class="text-2xl font-black text-slate-800 mt-1">--</div>
+            </div>
+            <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+                <span class="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Tidak Patuh</span>
+                <div id="noncompliant-count" class="text-2xl font-black text-rose-500 mt-1">--</div>
             </div>
         </div>
 
-        <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 mb-10">
-            <h3 class="text-lg font-extrabold text-slate-800 mb-6">Visualisasi Kepatuhan Per Unit Kerja</h3>
-            <div class="h-[400px] w-full">
-                <canvas id="mutuChart"></canvas>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
+            <div class="lg:col-span-2 bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+                <h3 class="text-sm font-extrabold text-slate-800 mb-6 uppercase tracking-wider">Tren Kepatuhan Per Unit</h3>
+                <div class="h-[350px]">
+                    <canvas id="mutuChart"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 flex flex-col">
+                <div class="flex items-center gap-2 mb-6">
+                    <div class="w-2 h-6 bg-rose-500 rounded-full"></div>
+                    <h3 class="text-sm font-extrabold text-slate-800 uppercase tracking-wider">10 Besar Tidak Patuh</h3>
+                </div>
+                <div id="top-failure-list" class="space-y-4 flex-grow">
+                    <p class="text-xs text-slate-400 italic">Memproses peringkat...</p>
+                </div>
+                <p class="mt-6 text-[10px] text-slate-400 italic">*Berdasarkan jumlah temuan terbanyak pada indikator terpilih.</p>
             </div>
         </div>
 
-        <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-            <div class="p-8 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
-                <h3 class="text-lg font-extrabold text-slate-800">Daftar Kendala & Tindak Lanjut</h3>
-                <span class="bg-rose-100 text-rose-600 text-[10px] font-bold px-3 py-1 rounded-full uppercase">Kategori: Tidak Patuh</span>
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+            <div class="px-8 py-5 bg-slate-50 border-b border-slate-100">
+                <h3 class="text-sm font-extrabold text-slate-800 uppercase tracking-wider">Detail Kendala & Tindak Lanjut</h3>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left">
-                    <thead class="bg-slate-50 text-slate-400 text-[10px] font-bold uppercase tracking-widest">
+                    <thead class="bg-slate-50 text-slate-400 text-[10px] font-bold uppercase tracking-widest border-b border-slate-100">
                         <tr>
                             <th class="px-8 py-4">Unit Kerja</th>
-                            <th class="px-8 py-4">Masalah / Alasan</th>
+                            <th class="px-8 py-4">Alasan / Kendala yang Terjadi</th>
                         </tr>
                     </thead>
-                    <tbody id="problem-table-body" class="divide-y divide-slate-100 text-sm">
+                    <tbody id="problem-table-body" class="divide-y divide-slate-100 text-xs">
                         </tbody>
                 </table>
             </div>
         </div>
-
     </main>
 
     <script>
-        // --- KONFIGURASI LINK DATA ---
         const SHEET_ID = '136P0ouYEC990HEURCtzUARcdc-NdprIQHhspQzuIV0Y';
         const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`;
 
         let rawData = [];
         let myChart = null;
 
-        // --- KONFIGURASI KOLOM (SESUAI SPREADSHEET) ---
         const config = {
-            'kkt': {
-                name: 'Kepatuhan Kebersihan Tangan',
-                target: 85,
-                compliantValue: 'Dilakukan',
-                column: 'Apakah Dilakukan'
-            },
-            'apd': {
-                name: 'Kepatuhan Penggunaan APD',
-                target: 100,
-                compliantValue: 'Ya', // Jika di sheet pakai Ya/Tidak, ubah ini
-                column: 'Apakah APD digunakan secara lengkap ?'
-            },
-            'identifikasi': {
-                name: 'Kepatuhan Identifikasi Pasien',
-                target: 100,
-                compliantValue: 'Ya',
-                column: 'Apakah tindakan intervensi pasien dilakukan identifikasi dengan benar ?'
-            }
+            'kkt': { name: 'Kebersihan Tangan', target: 85, complVal: 'Dilakukan', col: 'Apakah Dilakukan' },
+            'apd': { name: 'Penggunaan APD', target: 100, complVal: 'Ya', col: 'Apakah APD digunakan secara lengkap ?' },
+            'identifikasi': { name: 'Identifikasi Pasien', target: 100, complVal: 'Ya', col: 'Apakah tindakan intervensi pasien dilakukan identifikasi dengan benar ?' }
         };
 
-        // Fungsi Ambil Data
-        async function loadData() {
+        async function init() {
             try {
-                const response = await fetch(CSV_URL);
-                const csvText = await response.text();
-                
-                Papa.parse(csvText, {
+                const res = await fetch(CSV_URL);
+                const text = await res.text();
+                Papa.parse(text, {
                     header: true,
                     skipEmptyLines: true,
-                    complete: function(results) {
-                        // Bersihkan spasi di nama header agar cocok dengan config
-                        rawData = results.data.map(row => {
-                            let newRow = {};
-                            for (let key in row) {
-                                newRow[key.trim()] = row[key];
-                            }
-                            return newRow;
+                    complete: (results) => {
+                        rawData = results.data.map(r => {
+                            let clean = {};
+                            for (let k in r) clean[k.trim()] = r[k];
+                            return clean;
                         }).filter(r => r['Unit Kerja']);
-                        
-                        updateDashboard();
+                        render();
                     }
                 });
-            } catch (err) {
-                console.error("Gagal Memuat:", err);
-            }
+            } catch (e) { console.error(e); }
         }
 
-        // Fungsi Update UI
-        function updateDashboard() {
+        function render() {
             const key = document.getElementById('indicatorSelector').value;
             const cfg = config[key];
-
-            let totals = { compliant: 0, valid: 0 };
+            let total = 0, compl = 0;
             let unitStats = {};
-            let problemHTML = "";
+            let failuresByUnit = {}; // Untuk ranking 10 besar
+            let tableHTML = "";
 
             rawData.forEach(row => {
-                const val = row[cfg.column];
+                const val = row[cfg.col];
                 const unit = row['Unit Kerja'];
 
                 if (val) {
-                    totals.valid++;
-                    if (!unitStats[unit]) unitStats[unit] = { compl: 0, count: 0 };
-                    unitStats[unit].count++;
+                    total++;
+                    if (!unitStats[unit]) unitStats[unit] = { c: 0, t: 0 };
+                    unitStats[unit].t++;
 
-                    if (val.toLowerCase().includes(cfg.compliantValue.toLowerCase())) {
-                        totals.compliant++;
-                        unitStats[unit].compl++;
+                    if (val.toLowerCase().includes(cfg.complVal.toLowerCase())) {
+                        compl++;
+                        unitStats[unit].c++;
                     } else {
-                        problemHTML += `<tr class="hover:bg-slate-50 transition-colors">
-                            <td class="px-8 py-4 font-bold text-blue-600">${unit}</td>
-                            <td class="px-8 py-4 text-slate-500">${row['Alasan / Masalah'] || 'Belum ada penjelasan'}</td>
-                        </tr>`;
+                        // Hitung jumlah kegagalan per unit
+                        failuresByUnit[unit] = (failuresByUnit[unit] || 0) + 1;
+                        tableHTML += `<tr><td class="px-8 py-4 font-bold text-blue-600">${unit}</td><td class="px-8 py-4 text-slate-500">${row['Alasan / Masalah'] || '-'}</td></tr>`;
                     }
                 }
             });
 
-            // Update Cards
-            const percent = totals.valid > 0 ? ((totals.compliant / totals.valid) * 100).toFixed(1) : 0;
-            document.getElementById('current-percent').innerText = percent + '%';
+            // Update UI Ringkasan
+            const perc = total > 0 ? ((compl / total) * 100).toFixed(1) : 0;
+            document.getElementById('current-percent').innerText = perc + '%';
             document.getElementById('indicator-name-summary').innerText = cfg.name;
             document.getElementById('target-value').innerText = cfg.target + '%';
-            document.getElementById('total-samples').innerText = totals.valid;
-            document.getElementById('compliant-count').innerText = totals.compliant;
-            document.getElementById('noncompliant-count').innerText = totals.valid - totals.compliant;
+            document.getElementById('total-samples').innerText = total;
+            document.getElementById('noncompliant-count').innerText = total - compl;
 
-            // Status Badge Logic
-            const badge = document.getElementById('status-badge');
-            if (percent >= cfg.target) {
-                badge.innerText = "Target Tercapai";
-                badge.className = "px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tighter bg-emerald-100 text-emerald-600";
+            // Logic 10 Besar Tidak Patuh
+            const top10 = Object.entries(failuresByUnit)
+                .sort((a, b) => b - a)
+                .slice(0, 10);
+
+            let topHTML = "";
+            if (top10.length > 0) {
+                top10.forEach(([name, count], index) => {
+                    topHTML += `
+                    <div class="flex items-center justify-between group">
+                        <div class="flex items-center gap-3">
+                            <span class="w-5 h-5 flex items-center justify-center bg-slate-100 text-[10px] font-black rounded-md text-slate-500 group-hover:bg-rose-500 group-hover:text-white transition-all">${index + 1}</span>
+                            <span class="text-xs font-semibold text-slate-700 truncate w-32 md:w-48">${name}</span>
+                        </div>
+                        <span class="text-[10px] font-black text-rose-500 bg-rose-50 px-2 py-1 rounded-full">${count} Temuan</span>
+                    </div>`;
+                });
             } else {
-                badge.innerText = "Di Bawah Target";
-                badge.className = "px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tighter bg-rose-100 text-rose-600";
+                topHTML = `<p class="text-xs text-emerald-600 font-bold">✅ Tidak ada temuan ketidakpatuhan.</p>`;
             }
+            document.getElementById('top-failure-list').innerHTML = topHTML;
+            document.getElementById('problem-table-body').innerHTML = tableHTML || '<tr><td colspan="2" class="p-10 text-center italic text-slate-400">Semua unit patuh.</td></tr>';
 
-            document.getElementById('problem-table-body').innerHTML = problemHTML || '<tr><td colspan="2" class="p-10 text-center text-slate-400 italic">Semua data patuh standar.</td></tr>';
-
-            renderChart(unitStats, cfg);
-        }
-
-        // Fungsi Render Grafik
-        function renderChart(stats, cfg) {
-            const labels = Object.keys(stats);
-            const dataValues = labels.map(l => ((stats[l].compl / stats[l].count) * 100).toFixed(1));
-
+            // Chart
             if (myChart) myChart.destroy();
-
-            const ctx = document.getElementById('mutuChart').getContext('2d');
-            myChart = new Chart(ctx, {
+            const labels = Object.keys(unitStats);
+            myChart = new Chart(document.getElementById('mutuChart').getContext('2d'), {
                 type: 'bar',
                 data: {
                     labels: labels,
                     datasets: [{
                         label: '% Kepatuhan',
-                        data: dataValues,
-                        backgroundColor: '#2563eb',
-                        borderRadius: 10,
-                        barThickness: 30
+                        data: labels.map(l => ((unitStats[l].c / unitStats[l].t) * 100).toFixed(1)),
+                        backgroundColor: '#10b981',
+                        borderRadius: 8
                     }, {
-                        label: 'Target ' + cfg.target + '%',
+                        label: 'Target',
                         data: Array(labels.length).fill(cfg.target),
                         type: 'line',
                         borderColor: '#f43f5e',
                         borderWidth: 2,
-                        borderDash:,
-                        pointRadius: 0
+                        pointRadius: 0,
+                        borderDash:
                     }]
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: { beginAtZero: true, max: 100, grid: { color: '#f1f5f9' } },
-                        x: { grid: { display: false } }
-                    },
-                    plugins: {
-                        legend: { display: false }
-                    }
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, max: 100 } }
                 }
             });
         }
 
-        document.getElementById('indicatorSelector').addEventListener('change', updateDashboard);
-        window.onload = loadData;
+        document.getElementById('indicatorSelector').addEventListener('change', render);
+        window.onload = init;
     </script>
 </body>
 </html>
