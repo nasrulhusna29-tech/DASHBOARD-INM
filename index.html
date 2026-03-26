@@ -10,15 +10,13 @@
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
     
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f4f7fa; color: #333; }
-        .navbar { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%) !important; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .card { border: none; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); margin-bottom: 20px; transition: 0.3s; }
-        .filter-section { background: white; padding: 25px; border-radius: 15px; margin-bottom: 25px; border-top: 5px solid #3498db; }
+        body { font-family: 'Inter', sans-serif; background-color: #f4f7fa; }
+        .navbar { background: #1e3c72 !important; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .card { border: none; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
         .stat-card { text-align: center; padding: 20px; border-top: 5px solid #2ecc71; }
-        .stat-value { font-size: 2.5rem; font-weight: 700; color: #1e3c72; margin-top: 10px; }
-        .chart-container { height: 350px; position: relative; padding: 10px; }
-        .table-responsive { font-size: 0.85rem; padding: 10px; }
-        th { background-color: #f8f9fa !important; font-weight: 600; text-transform: uppercase; font-size: 0.75rem; }
+        .stat-value { font-size: 2.2rem; font-weight: 700; color: #1e3c72; }
+        .chart-container { height: 350px; position: relative; }
+        .filter-section { background: white; padding: 20px; border-radius: 15px; margin-bottom: 20px; border-left: 5px solid #3498db; }
     </style>
 </head>
 <body>
@@ -32,29 +30,21 @@
     <div class="container-fluid px-4">
         
         <div class="filter-section">
-            <h6 class="fw-bold mb-3"><i class="bi bi-filter"></i> Filter Data</h6>
             <div class="row g-3">
                 <div class="col-md-3">
-                    <label class="form-label text-muted small fw-bold">Bulan & Tahun</label>
-                    <input type="month" id="filter-date" class="form-control shadow-sm">
+                    <label class="form-label small fw-bold">Bulan & Tahun</label>
+                    <input type="month" id="filter-date" class="form-control">
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label text-muted small fw-bold">Pilih Ruangan</label>
-                    <select id="filter-ruangan" class="form-select shadow-sm">
-                        <option value="">Semua Ruangan</option>
-                    </select>
+                    <label class="form-label small fw-bold">Ruangan</label>
+                    <select id="filter-ruangan" class="form-select"><option value="">Semua Ruangan</option></select>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label text-muted small fw-bold">Jenis Kepatuhan</label>
-                    <select id="filter-indikator" class="form-select shadow-sm">
-                        <option value="">Semua Indikator</option>
-                        <option value="Kepatuhan Kebersihan Tangan">Kepatuhan Kebersihan Tangan</option>
-                        <option value="Kepatuhan Penggunaan Alat Pelindung Diri (APD)">Kepatuhan Penggunaan APD</option>
-                        <option value="Kepatuhan Identifikasi Pasien">Kepatuhan Identifikasi Pasien</option>
-                    </select>
+                    <label class="form-label small fw-bold">Indikator</label>
+                    <select id="filter-indikator" class="form-select"><option value="">Semua Indikator</option></select>
                 </div>
                 <div class="col-md-3 d-flex align-items-end">
-                    <button class="btn btn-primary w-100 fw-bold shadow-sm" onclick="applyFilters()">Tampilkan Data</button>
+                    <button class="btn btn-primary w-100 fw-bold" onclick="applyFilters()">Update Tampilan</button>
                 </div>
             </div>
         </div>
@@ -62,34 +52,27 @@
         <div class="row">
             <div class="col-md-6">
                 <div class="card stat-card">
-                    <p class="text-muted mb-0">Total Observasi Terfilter</p>
+                    <p class="text-muted mb-0">Total Observasi</p>
                     <div id="total-obs" class="stat-value">0</div>
                 </div>
             </div>
             <div class="col-md-6">
                 <div class="card stat-card" style="border-top-color: #3498db;">
-                    <p class="text-muted mb-0">Rata-rata Kepatuhan (%)</p>
+                    <p class="text-muted mb-0">Rata-rata Kepatuhan</p>
                     <div id="avg-compliance" class="stat-value text-primary">0%</div>
                 </div>
             </div>
         </div>
 
         <div class="card p-4">
-            <h6 class="fw-bold mb-4 text-center">Analisis Kepatuhan per Indikator (%)</h6>
-            <div class="chart-container">
-                <canvas id="mainChart"></canvas>
-            </div>
+            <h6 class="fw-bold mb-4">Grafik Kepatuhan per Indikator (%)</h6>
+            <div class="chart-container"><canvas id="mainChart"></canvas></div>
         </div>
 
-        <div class="card">
-            <div class="card-header bg-white py-3">
-                <h6 class="mb-0 fw-bold text-primary">Detail Rekapitulasi Data</h6>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table id="inmTable" class="table table-hover w-100">
-                        </table>
-                </div>
+        <div class="card p-0 overflow-hidden">
+            <div class="card-header bg-white py-3"><h6 class="mb-0 fw-bold">Tabel Data Mentah</h6></div>
+            <div class="table-responsive p-3">
+                <table id="inmTable" class="table table-hover w-100"></table>
             </div>
         </div>
     </div>
@@ -101,90 +84,87 @@
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 
     <script>
-        // Link CSV dari Google Sheets Anda
         const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRfB8jU_z4znfSFDd83-1oPGnz_3jGHfdfeKLYJ-cm7cFc2MKImrTPXUMOWKUGCfYbzGnV8reqGGhfa/pub?gid=935629840&single=true&output=csv';
         
         let rawData = [];
-        let tableHeaders = [];
+        let headers = [];
         let mainChart;
         let dataTable;
+        let idx = { time: 0, room: 3, ind: 4, val: 5 }; // Default index
 
-        // Fungsi Memuat Data Pertama Kali
         function init() {
             Papa.parse(csvUrl, {
                 download: true,
                 header: false,
                 skipEmptyLines: true,
                 complete: function(results) {
-                    const rows = results.data;
-                    tableHeaders = rows;
-                    rawData = rows.slice(1);
+                    headers = results.data;
+                    rawData = results.data.slice(1);
 
-                    // Ambil daftar ruangan unik untuk dropdown (Kolom index 3)
-                    const roomSelect = document.getElementById('filter-ruangan');
-                    const rooms = [...new Set(rawData.map(r => r))]
-                                    .filter(r => r && r.trim() !== "")
-                                    .sort();
-                    
-                    rooms.forEach(room => roomSelect.add(new Option(room, room)));
+                    // Auto-detect kolom berdasarkan nama (agar tidak tertukar)
+                    headers.forEach((h, i) => {
+                        const head = h.toLowerCase();
+                        if(head.includes('timestamp')) idx.time = i;
+                        if(head.includes('ruangan')) idx.room = i;
+                        if(head.includes('indikator')) idx.ind = i;
+                        if(head.includes('kepatuhan')) idx.val = i;
+                    });
 
-                    // Set filter bulan ke bulan sekarang secara otomatis
-                    const today = new Date();
-                    document.getElementById('filter-date').value = today.toISOString().substring(0, 7);
+                    // Isi Dropdown Ruangan & Indikator
+                    const fillSelect = (id, col) => {
+                        const items = [...new Set(rawData.map(r => r[col]))].filter(Boolean).sort();
+                        items.forEach(item => document.getElementById(id).add(new Option(item, item)));
+                    };
+                    fillSelect('filter-ruangan', idx.room);
+                    fillSelect('filter-indikator', idx.ind);
 
                     applyFilters();
-                },
-                error: function() {
-                    alert("Error: Gagal mengambil data. Pastikan link CSV benar.");
                 }
             });
         }
 
-        // Fungsi Filter Data
         function applyFilters() {
-            const fDate = document.getElementById('filter-date').value;
+            const fDate = document.getElementById('filter-date').value; // YYYY-MM
             const fRoom = document.getElementById('filter-ruangan').value;
             const fInd = document.getElementById('filter-indikator').value;
 
             const filtered = rawData.filter(row => {
-                // Parsing tanggal Google Sheet (M/D/YYYY)
-                const dateParts = row.split(' ').split('/'); 
-                let rowMonthYear = "";
-                if(dateParts.length === 3) {
-                    // Membuat format YYYY-MM
-                    rowMonthYear = `${dateParts}-${dateParts.padStart(2, '0')}`;
+                const dateStr = row[idx.time] || "";
+                // Menangani format M/D/YYYY atau D/M/YYYY
+                const parts = dateStr.split(' ').split('/');
+                let matchDate = true;
+                if(fDate && parts.length === 3) {
+                    const rowMonth = parts.padStart(2, '0');
+                    const rowYear = parts;
+                    matchDate = `${rowYear}-${rowMonth}` === fDate;
                 }
-
-                const matchDate = !fDate || rowMonthYear === fDate;
-                const matchRoom = !fRoom || row === fRoom;
-                const matchInd = !fInd || row === fInd;
-
-                return matchDate && matchRoom && matchInd;
+                
+                return matchDate && 
+                       (!fRoom || row[idx.room] === fRoom) && 
+                       (!fInd || row[idx.ind] === fInd);
             });
 
-            updateVisuals(filtered);
+            updateDisplay(filtered);
         }
 
-        // Fungsi Update Grafik & Tabel
-        function updateVisuals(data) {
-            let totalYa = 0;
+        function updateDisplay(data) {
+            let yaCount = 0;
             const stats = {};
 
             data.forEach(row => {
-                const ind = row; // Kolom Indikator
-                const kep = (row || "").toLowerCase().trim(); // Kolom Kepatuhan
+                const indName = row[idx.ind] || "Lainnya";
+                const result = (row[idx.val] || "").toLowerCase().trim();
                 
-                if(!stats[ind]) stats[ind] = { ya: 0, total: 0 };
-                if(kep === 'ya') { stats[ind].ya++; totalYa++; }
-                stats[ind].total++;
+                if(!stats[indName]) stats[indName] = { ya: 0, total: 0 };
+                if(result === 'ya') { stats[indName].ya++; yaCount++; }
+                stats[indName].total++;
             });
 
-            // Update Angka Statistik
             document.getElementById('total-obs').innerText = data.length;
-            const percent = data.length > 0 ? ((totalYa/data.length)*100).toFixed(1) : 0;
-            document.getElementById('avg-compliance').innerText = percent + '%';
+            const avg = data.length > 0 ? ((yaCount/data.length)*100).toFixed(1) : 0;
+            document.getElementById('avg-compliance').innerText = avg + '%';
 
-            // Update Grafik Batang
+            // Update Chart
             const labels = Object.keys(stats);
             const values = labels.map(l => ((stats[l].ya/stats[l].total)*100).toFixed(1));
 
@@ -193,30 +173,18 @@
                 type: 'bar',
                 data: {
                     labels: labels,
-                    datasets: [{
-                        label: '% Kepatuhan',
-                        data: values,
-                        backgroundColor: '#3498db',
-                        borderRadius: 10
-                    }]
+                    datasets: [{ label: '% Kepatuhan', data: values, backgroundColor: '#3498db', borderRadius: 5 }]
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: { y: { beginAtZero: true, max: 100 } },
-                    plugins: { legend: { display: false } }
-                }
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 100 } } }
             });
 
-            // Update DataTables
+            // Update Table
             if(dataTable) dataTable.destroy();
             $('#inmTable').empty();
             dataTable = $('#inmTable').DataTable({
                 data: data,
-                columns: tableHeaders.map(h => ({ title: h })),
-                pageLength: 10,
-                order: [[0, 'desc']],
-                language: { search: "Cari Data:" }
+                columns: headers.map(h => ({ title: h })),
+                pageLength: 5
             });
         }
 
