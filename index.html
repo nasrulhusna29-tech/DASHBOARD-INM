@@ -8,7 +8,8 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
     <style>
-        @import url('https://docs.google.com/spreadsheets/d/136P0ouYEC990HEURCtzUARcdc-NdprIQHhspQzuIV0Y/edit?usp=sharing);
+        /* Perbaikan: Import font yang benar, bukan link spreadsheet */
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
     </style>
 </head>
@@ -21,11 +22,11 @@
                     <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
                 </div>
                 <div>
-                    <h1 class="text-xl font-extrabold tracking-tight">Monitoring Mutu INM</h1>
+                    <h1 class="text-xl font-extrabold tracking-tight text-slate-800">Monitoring Mutu INM</h1>
                     <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Puskesmas Cilincing</p>
                 </div>
             </div>
-            <select id="indicatorSelector" class="bg-slate-100 border-none text-slate-700 text-sm font-bold rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-emerald-500 cursor-pointer shadow-inner">
+            <select id="indicatorSelector" class="bg-slate-100 border-none text-slate-700 text-sm font-bold rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-emerald-500 cursor-pointer shadow-inner outline-none">
                 <option value="kkt">1. Kepatuhan Kebersihan Tangan</option>
                 <option value="apd">2. Kepatuhan Penggunaan APD</option>
                 <option value="identifikasi">3. Identifikasi Pasien</option>
@@ -39,7 +40,7 @@
             <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 text-center">
                 <span class="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Capaian Saat Ini</span>
                 <div id="current-percent" class="text-4xl font-black text-emerald-600 my-1">0%</div>
-                <p id="indicator-name-summary" class="text-[11px] font-semibold text-slate-500 truncate">Memuat...</p>
+                <p id="indicator-name-summary" class="text-[11px] font-semibold text-slate-500 truncate italic">Memuat...</p>
             </div>
             <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
                 <span class="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Target & Status</span>
@@ -52,9 +53,9 @@
                 <span class="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Total Sampel</span>
                 <div id="total-samples" class="text-2xl font-black text-slate-800 mt-1">--</div>
             </div>
-            <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-                <span class="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Tidak Patuh</span>
-                <div id="noncompliant-count" class="text-2xl font-black text-rose-500 mt-1">--</div>
+            <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 text-rose-600">
+                <span class="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Total Tidak Patuh</span>
+                <div id="noncompliant-count" class="text-2xl font-black mt-1">--</div>
             </div>
         </div>
 
@@ -67,30 +68,29 @@
             </div>
 
             <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 flex flex-col">
-                <div class="flex items-center gap-2 mb-6">
+                <div class="flex items-center gap-2 mb-6 text-rose-500">
                     <div class="w-2 h-6 bg-rose-500 rounded-full"></div>
                     <h3 class="text-sm font-extrabold text-slate-800 uppercase tracking-wider">10 Besar Tidak Patuh</h3>
                 </div>
                 <div id="top-failure-list" class="space-y-4 flex-grow">
-                    <p class="text-xs text-slate-400 italic">Memproses peringkat...</p>
-                </div>
-                <p class="mt-6 text-[10px] text-slate-400 italic">*Berdasarkan jumlah temuan terbanyak pada indikator terpilih.</p>
+                    </div>
+                <p class="mt-6 text-[10px] text-slate-400 italic leading-relaxed">*Urutan berdasarkan jumlah frekuensi "Tidak Patuh" pada indikator yang dipilih.</p>
             </div>
         </div>
 
         <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
             <div class="px-8 py-5 bg-slate-50 border-b border-slate-100">
-                <h3 class="text-sm font-extrabold text-slate-800 uppercase tracking-wider">Detail Kendala & Tindak Lanjut</h3>
+                <h3 class="text-sm font-extrabold text-slate-800 uppercase tracking-wider">Daftar Temuan Kendala</h3>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left">
                     <thead class="bg-slate-50 text-slate-400 text-[10px] font-bold uppercase tracking-widest border-b border-slate-100">
                         <tr>
-                            <th class="px-8 py-4">Unit Kerja</th>
-                            <th class="px-8 py-4">Alasan / Kendala yang Terjadi</th>
+                            <th class="px-8 py-4 w-1/3">Unit Kerja</th>
+                            <th class="px-8 py-4">Alasan / Masalah</th>
                         </tr>
                     </thead>
-                    <tbody id="problem-table-body" class="divide-y divide-slate-100 text-xs">
+                    <tbody id="problem-table-body" class="divide-y divide-slate-100 text-xs text-slate-600">
                         </tbody>
                 </table>
             </div>
@@ -98,15 +98,16 @@
     </main>
 
     <script>
+        // Perbaikan: Pastikan Link mengarah ke format ekspor CSV
         const SHEET_ID = '136P0ouYEC990HEURCtzUARcdc-NdprIQHhspQzuIV0Y';
-        const CSV_URL = `https://docs.google.com/spreadsheets/d/136P0ouYEC990HEURCtzUARcdc-NdprIQHhspQzuIV0Y/edit?usp=sharing`;
+        const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`;
 
         let rawData = [];
         let myChart = null;
 
         const config = {
             'kkt': { name: 'Kebersihan Tangan', target: 85, complVal: 'Dilakukan', col: 'Apakah Dilakukan' },
-            'apd': { name: 'Penggunaan APD', target: 100, complVal: 'Ya', col: 'Apakah APD digunakan secara lengkap ?' },
+            'apd': { name: 'Penggunaan APD', target: 100, complVal: 'Lengkap', col: 'Apakah APD digunakan secara lengkap ?' },
             'identifikasi': { name: 'Identifikasi Pasien', target: 100, complVal: 'Ya', col: 'Apakah tindakan intervensi pasien dilakukan identifikasi dengan benar ?' }
         };
 
@@ -126,7 +127,7 @@
                         render();
                     }
                 });
-            } catch (e) { console.error(e); }
+            } catch (e) { console.error("Error fetching data:", e); }
         }
 
         function render() {
@@ -134,30 +135,33 @@
             const cfg = config[key];
             let total = 0, compl = 0;
             let unitStats = {};
-            let failuresByUnit = {}; // Untuk ranking 10 besar
+            let failuresByUnit = {}; 
             let tableHTML = "";
 
             rawData.forEach(row => {
                 const val = row[cfg.col];
                 const unit = row['Unit Kerja'];
 
-                if (val) {
+                if (val && unit) {
                     total++;
                     if (!unitStats[unit]) unitStats[unit] = { c: 0, t: 0 };
                     unitStats[unit].t++;
 
-                    if (val.toLowerCase().includes(cfg.complVal.toLowerCase())) {
+                    // Case-insensitive check
+                    if (val.toString().toLowerCase() === cfg.complVal.toLowerCase()) {
                         compl++;
                         unitStats[unit].c++;
                     } else {
-                        // Hitung jumlah kegagalan per unit
                         failuresByUnit[unit] = (failuresByUnit[unit] || 0) + 1;
-                        tableHTML += `<tr><td class="px-8 py-4 font-bold text-blue-600">${unit}</td><td class="px-8 py-4 text-slate-500">${row['Alasan / Masalah'] || '-'}</td></tr>`;
+                        tableHTML += `<tr class="hover:bg-slate-50 transition-colors">
+                            <td class="px-8 py-4 font-bold text-emerald-700">${unit}</td>
+                            <td class="px-8 py-4">${row['Alasan / Masalah'] || '-'}</td>
+                        </tr>`;
                     }
                 }
             });
 
-            // Update UI Ringkasan
+            // Summary UI
             const perc = total > 0 ? ((compl / total) * 100).toFixed(1) : 0;
             document.getElementById('current-percent').innerText = perc + '%';
             document.getElementById('indicator-name-summary').innerText = cfg.name;
@@ -165,33 +169,44 @@
             document.getElementById('total-samples').innerText = total;
             document.getElementById('noncompliant-count').innerText = total - compl;
 
-            // Logic 10 Besar Tidak Patuh
+            // Badge Logic
+            const badge = document.getElementById('status-badge');
+            if (parseFloat(perc) >= cfg.target) {
+                badge.innerText = "Tercapai";
+                badge.className = "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter bg-emerald-100 text-emerald-600";
+            } else {
+                badge.innerText = "Tidak Tercapai";
+                badge.className = "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter bg-rose-100 text-rose-600";
+            }
+
+            // Ranking Logic (Fixed Sort)
             const top10 = Object.entries(failuresByUnit)
-                .sort((a, b) => b - a)
+                .sort((a, b) => b - a) // Sort by count descending
                 .slice(0, 10);
 
             let topHTML = "";
             if (top10.length > 0) {
                 top10.forEach(([name, count], index) => {
                     topHTML += `
-                    <div class="flex items-center justify-between group">
+                    <div class="flex items-center justify-between group p-1">
                         <div class="flex items-center gap-3">
-                            <span class="w-5 h-5 flex items-center justify-center bg-slate-100 text-[10px] font-black rounded-md text-slate-500 group-hover:bg-rose-500 group-hover:text-white transition-all">${index + 1}</span>
+                            <span class="w-5 h-5 flex items-center justify-center bg-slate-100 text-[10px] font-bold rounded text-slate-400 group-hover:bg-rose-500 group-hover:text-white transition-all">${index + 1}</span>
                             <span class="text-xs font-semibold text-slate-700 truncate w-32 md:w-48">${name}</span>
                         </div>
                         <span class="text-[10px] font-black text-rose-500 bg-rose-50 px-2 py-1 rounded-full">${count} Temuan</span>
                     </div>`;
                 });
             } else {
-                topHTML = `<p class="text-xs text-emerald-600 font-bold">✅ Tidak ada temuan ketidakpatuhan.</p>`;
+                topHTML = `<div class="py-10 text-center"><p class="text-xs text-emerald-600 font-bold">✅ Seluruh Unit Patuh</p></div>`;
             }
             document.getElementById('top-failure-list').innerHTML = topHTML;
-            document.getElementById('problem-table-body').innerHTML = tableHTML || '<tr><td colspan="2" class="p-10 text-center italic text-slate-400">Semua unit patuh.</td></tr>';
+            document.getElementById('problem-table-body').innerHTML = tableHTML || '<tr><td colspan="2" class="p-10 text-center italic text-slate-400">Tidak ada data ketidakpatuhan ditemukan.</td></tr>';
 
-            // Chart
+            // Chart Rendering
             if (myChart) myChart.destroy();
             const labels = Object.keys(unitStats);
-            myChart = new Chart(document.getElementById('mutuChart').getContext('2d'), {
+            const ctx = document.getElementById('mutuChart').getContext('2d');
+            myChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: labels,
@@ -199,7 +214,8 @@
                         label: '% Kepatuhan',
                         data: labels.map(l => ((unitStats[l].c / unitStats[l].t) * 100).toFixed(1)),
                         backgroundColor: '#10b981',
-                        borderRadius: 8
+                        borderRadius: 6,
+                        barThickness: 25
                     }, {
                         label: 'Target',
                         data: Array(labels.length).fill(cfg.target),
@@ -214,7 +230,10 @@
                     responsive: true, 
                     maintainAspectRatio: false, 
                     plugins: { legend: { display: false } },
-                    scales: { y: { beginAtZero: true, max: 100 } }
+                    scales: { 
+                        y: { beginAtZero: true, max: 100, grid: { color: '#f1f5f9' } },
+                        x: { grid: { display: false } }
+                    }
                 }
             });
         }
