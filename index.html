@@ -3,127 +3,270 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard INM - Puskesmas Cilincing</title>
+    <title>Dashboard INM Berbasis Pilihan - Puskesmas Cilincing</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
 </head>
-<body class="bg-gray-100 font-sans">
+<body class="bg-gray-50 font-sans text-gray-900">
 
-    <nav class="bg-blue-600 p-4 text-white shadow-lg text-center">
-        <h1 class="text-2xl font-bold uppercase tracking-wide">Monitoring Indikator Nasional Mutu</h1>
-        <p class="text-sm opacity-80">Puskesmas Cilincing | Update Real-time</p>
+    <nav class="bg-white p-4 shadow-sm border-b border-gray-100">
+        <div class="container mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Logo_Puskesmas_Indonesia.png/640px-Logo_Puskesmas_Indonesia.png" alt="Logo Puskesmas" class="h-10">
+                <div>
+                    <h1 class="text-xl font-bold text-gray-800">Monitoring Mutu Real-time</h1>
+                    <p class="text-xs text-gray-500">Puskesmas Cilincing, Jakarta Utara</p>
+                </div>
+            </div>
+            <div class="relative">
+                <select id="indicatorSelector" class="appearance-none bg-blue-50 border border-blue-200 text-blue-700 font-semibold text-sm rounded-full pl-5 pr-10 py-2.5 focus:ring-2 focus:ring-blue-300 focus:border-blue-400 cursor-pointer shadow-sm">
+                    <option value="kkt" selected>Kebersihan Tangan</option>
+                    <option value="apd">Penggunaan APD</option>
+                    <option value="identifikasi">Identifikasi Pasien</option>
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-blue-500">
+                    <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                </div>
+            </div>
+        </div>
     </nav>
 
-    <div class="container mx-auto p-6">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <div class="bg-white p-6 rounded-xl shadow-md border-l-4 border-green-500 text-center">
-                <h2 class="text-gray-500 uppercase text-xs font-bold">Kepatuhan Kebersihan Tangan</h2>
-                <p id="kkt-percent" class="text-4xl font-extrabold text-gray-800">0%</p>
-                <p class="text-xs text-green-600 mt-2">Target Nasional: 85%</p>
+    <main class="container mx-auto p-6 md:p-10">
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            <div class="bg-white p-6 rounded-3xl shadow-lg shadow-gray-100 border border-gray-100 text-center flex flex-col items-center justify-center">
+                <h2 class="text-gray-400 uppercase text-xs font-semibold tracking-wider mb-2">Capaian Saat Ini</h2>
+                <p id="current-percent" class="text-6xl font-extrabold text-blue-600">--%</p>
+                <p id="indicator-name-summary" class="text-sm text-gray-600 mt-2 font-medium">Memuat data...</p>
             </div>
-            <div class="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-500 text-center">
-                <h2 class="text-gray-500 uppercase text-xs font-bold">Kepatuhan Identifikasi Pasien</h2>
-                <p id="ident-percent" class="text-4xl font-extrabold text-gray-800">0%</p>
-                <p class="text-xs text-blue-600 mt-2">Target Nasional: 100%</p>
+            
+            <div class="bg-white p-6 rounded-3xl shadow-lg shadow-gray-100 border border-gray-100">
+                <h3 class="text-gray-400 uppercase text-xs font-semibold tracking-wider mb-4">Target & Status</h3>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-gray-500">Target Nasional</span>
+                        <span id="target-value" class="font-bold text-gray-800">--%</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-gray-500">Status Capaian</span>
+                        <span id="status-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-600">Memuat</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-3xl shadow-lg shadow-gray-100 border border-gray-100">
+                <h3 class="text-gray-400 uppercase text-xs font-semibold tracking-wider mb-4">Metrik Data</h3>
+                <div class="space-y-3 text-sm">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-500">Total Sampel</span>
+                        <span id="total-samples" class="font-bold text-gray-800">--</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-gray-500">Kepatuhan</span>
+                        <span id="compliant-count" class="font-bold text-green-600">--</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-gray-500">Ketidakpatuhan</span>
+                        <span id="noncompliant-count" class="font-bold text-red-600">--</span>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="bg-white p-6 rounded-xl shadow-md mb-8">
-            <h3 class="text-lg font-semibold mb-4 text-gray-700">Tren Kepatuhan Per Unit</h3>
-            <canvas id="mutuChart" height="100"></canvas>
+        <div class="bg-white p-8 rounded-3xl shadow-lg shadow-gray-100 border border-gray-100 mb-10">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-lg font-bold text-gray-800">Tren Kepatuhan per Unit Kerja</h3>
+            </div>
+            <div class="relative h-96">
+                <canvas id="mutuChart"></canvas>
+            </div>
         </div>
 
-        <div class="bg-white p-6 rounded-xl shadow-md overflow-x-auto">
-            <h3 class="text-lg font-semibold mb-4 text-red-600">Daftar Temuan / Masalah</h3>
-            <table class="w-full text-left border-collapse">
+        <div class="bg-white p-8 rounded-3xl shadow-lg shadow-gray-100 border border-gray-100 overflow-x-auto">
+            <h3 class="text-lg font-bold mb-6 text-red-700">Temuan Ketidakpatuhan & Kendala</h3>
+            <table class="w-full text-left">
                 <thead>
-                    <tr class="bg-gray-50 border-b">
-                        <th class="p-3 text-sm font-bold">Unit Kerja</th>
-                        <th class="p-3 text-sm font-bold">Masalah / Kendala</th>
+                    <tr class="text-xs uppercase text-gray-500 border-b border-gray-100">
+                        <th class="p-4 font-semibold">Tanggal</th>
+                        <th class="p-4 font-semibold">Unit Kerja</th>
+                        <th class="p-4 font-semibold">Masalah / Kendala</th>
                     </tr>
                 </thead>
-                <tbody id="problem-table-body" class="text-sm">
+                <tbody id="problem-table-body" class="text-sm text-gray-700 divide-y divide-gray-100">
                     </tbody>
             </table>
         </div>
-    </div>
+
+    </main>
+
+    <footer class="text-center p-10 text-xs text-gray-400">
+        Dashboard ini menarik data langsung dari Google Spreadsheet resmi Puskesmas Cilincing.
+    </footer>
 
     <script>
+        // --- KONFIGURASI SPREADSHEET ---
         const SHEET_ID = '136P0ouYEC990HEURCtzUARcdc-NdprIQHhspQzuIV0Y';
+        // Mengubah ID Sheet menjadi link ekspor CSV agar bisa dibaca script
         const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`;
 
-        async function fetchData() {
-            const response = await fetch(CSV_URL);
-            const data = await response.text();
-            
-            Papa.parse(data, {
-                header: true,
-                complete: function(results) {
-                    processData(results.data);
-                }
-            });
+        // Variabel global untuk menampung data dan objek grafik
+        let rawData = [];
+        let myChart = null;
+
+        // --- KONFIGURASI TARGET DAN KOLOM SPREADSHEET ---
+        const config = {
+            'kkt': {
+                name: 'Kepatuhan Kebersihan Tangan',
+                target: 85,
+                compliantValue: 'Dilakukan',
+                column: 'Apakah Dilakukan'
+            },
+            'apd': {
+                name: 'Kepatuhan Penggunaan APD',
+                target: 100, // Asumsi target APD nasional 100%
+                compliantValue: 'Lengkap', // Perbaiki sesuai nilai di Spreadsheet Anda
+                column: 'Sebutkan Jenis APD yang Digunakan :' // Sesuaikan kolom yang benar jika ada kolom 'Apakah APD Lengkap'
+            },
+            'identifikasi': {
+                name: 'Kepatuhan Identifikasi Pasien',
+                target: 100,
+                compliantValue: 'Ya',
+                column: 'Apakah tindakan intervensi pasien dilakukan identifikasi dengan benar ?'
+            }
+        };
+
+        // --- FUNGSI UTAMA: MENGAMBIL DATA ---
+        async function initDashboard() {
+            try {
+                const response = await fetch(CSV_URL);
+                const csvText = await response.text();
+                
+                // Parse CSV menjadi objek JSON
+                Papa.parse(csvText, {
+                    header: true,
+                    complete: function(results) {
+                        rawData = results.data.filter(row => row['Unit Kerja']); // Filter baris kosong
+                        updateVisualization(); // Visualisasi default (KKT)
+                    }
+                });
+            } catch (error) {
+                console.error("Gagal mengambil data:", error);
+                alert("Gagal memuat data dari Spreadsheet. Pastikan akses internet lancar.");
+            }
         }
 
-        function processData(data) {
-            let totalKKT = 0;
-            let totalIdent = 0;
-            let validKKT = 0;
-            let validIdent = 0;
-            let problems = "";
+        // --- FUNGSI: UPDATE VISUALISASI BERDASARKAN PILIHAN ---
+        function updateVisualization() {
+            const selectedIndicatorKey = document.getElementById('indicatorSelector').value;
+            const cfg = config[selectedIndicatorKey];
 
-            data.forEach(row => {
-                // Hitung KKT
-                if (row['Apakah Dilakukan']) {
-                    validKKT++;
-                    if (row['Apakah Dilakukan'] === 'Dilakukan') totalKKT++;
-                    else {
-                        // Tambah ke tabel masalah jika "Tidak Dilakukan"
-                        problems += `<tr class="border-b">
-                            <td class="p-3 font-medium text-blue-600">${row['Unit Kerja']}</td>
-                            <td class="p-3 text-gray-600">${row['Alasan / Masalah'] || 'Tanpa Keterangan'}</td>
-                        </tr>`;
+            // 1. Logika Perhitungan Metrik
+            let totalCompliant = 0;
+            let totalValid = 0;
+            let unitData = {};
+            let problemsTableHTML = "";
+
+            rawData.forEach(row => {
+                const value = row[cfg.column];
+                const unit = row['Unit Kerja'];
+                const tanggal = row['Tanggal'] || '-'; // Sesuaikan header tanggal jika ada
+
+                if (value) {
+                    totalValid++;
+                    if (!unitData[unit]) unitData[unit] = { compl: 0, total: 0 };
+                    unitData[unit].total++;
+
+                    if (value === cfg.compliantValue) {
+                        totalCompliant++;
+                        unitData[unit].compl++;
+                    } else {
+                        // Tambah ke tabel masalah jika tidak patuh
+                        problemsTableHTML += `
+                            <tr>
+                                <td class="p-4">${tanggal}</td>
+                                <td class="p-4 font-semibold text-blue-700">${unit}</td>
+                                <td class="p-4">${row['Alasan / Masalah'] || '<span class="text-gray-400">Tidak diisi</span>'}</td>
+                            </tr>
+                        `;
                     }
                 }
-                
-                // Hitung Identifikasi Pasien
-                if (row['Apakah tindakan intervensi pasien dilakukan identifikasi dengan benar ?']) {
-                    validIdent++;
-                    if (row['Apakah tindakan intervensi pasien dilakukan identifikasi dengan benar ?'] === 'Ya') totalIdent++;
-                }
             });
 
-            // Update UI
-            const kktPerc = (totalKKT / validKKT * 100).toFixed(1);
-            const identPerc = (totalIdent / validIdent * 100).toFixed(1);
+            // 2. Hitung Persentase & Update Ringkasan (Cards)
+            const percentage = totalValid > 0 ? ((totalCompliant / totalValid) * 100).toFixed(1) : 0;
+            const nonCompliant = totalValid - totalCompliant;
 
-            document.getElementById('kkt-percent').innerText = kktPerc + '%';
-            document.getElementById('ident-percent').innerText = identPerc + '%';
-            document.getElementById('problem-table-body').innerHTML = problems;
+            document.getElementById('current-percent').innerText = percentage + '%';
+            document.getElementById('indicator-name-summary').innerText = cfg.name;
+            document.getElementById('target-value').innerText = cfg.target + '%';
+            document.getElementById('total-samples').innerText = totalValid;
+            document.getElementById('compliant-count').innerText = totalCompliant;
+            document.getElementById('noncompliant-count').innerText = nonCompliant;
 
-            renderChart(kktPerc, identPerc);
-        }
+            // Update Status Badge
+            const statusBadge = document.getElementById('status-badge');
+            if (percentage >= cfg.target) {
+                statusBadge.innerText = 'Mencapai Target';
+                statusBadge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700';
+            } else {
+                statusBadge.innerText = 'Di Bawah Target';
+                statusBadge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700';
+            }
 
-        function renderChart(kkt, ident) {
+            // Update Tabel Masalah
+            document.getElementById('problem-table-body').innerHTML = problemsTableHTML || '<tr><td colspan="3" class="p-10 text-center text-gray-500">✅ Semua unit patuh pada indikator ini.</td></tr>';
+
+            // 3. Logika Grafik (Chart.js)
+            const labels = Object.keys(unitData);
+            const percentagesByUnit = labels.map(unit => ((unitData[unit].compl / unitData[unit].total) * 100).toFixed(1));
+
+            if (myChart) myChart.destroy(); // Hancurkan grafik lama jika ada
+
             const ctx = document.getElementById('mutuChart').getContext('2d');
-            new Chart(ctx, {
+            myChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: ['Kebersihan Tangan', 'Identifikasi Pasien'],
+                    labels: labels,
                     datasets: [{
-                        label: '% Kepatuhan',
-                        data: [kkt, ident],
-                        backgroundColor: ['#10b981', '#3b82f6'],
-                        borderRadius: 8
+                        label: '% Kepatuhan ' + cfg.name,
+                        data: percentagesByUnit,
+                        backgroundColor: percentage >= cfg.target ? '#3b82f6' : '#ef4444', // Blue jika ok, red jika no
+                        borderRadius: 12,
+                        barPercentage: 0.6
+                    },
+                    {
+                        label: 'Target Nasional',
+                        data: Array(labels.length).fill(cfg.target),
+                        type: 'line',
+                        borderColor: '#10b981',
+                        borderWidth: 2,
+                        borderDash:,
+                        fill: false,
+                        pointRadius: 0
                     }]
                 },
                 options: {
-                    scales: { y: { beginAtZero: true, max: 100 } }
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } },
+                        x: { grid: { display: false } }
+                    },
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
                 }
             });
         }
 
-        fetchData();
+        // --- EVENT LISTENER & STARTUP ---
+        // Jalankan update setiap kali pilihan dropdown berubah
+        document.getElementById('indicatorSelector').addEventListener('change', updateVisualization);
+
+        // Mulai dashboard
+        initDashboard();
+
     </script>
 </body>
 </html>
