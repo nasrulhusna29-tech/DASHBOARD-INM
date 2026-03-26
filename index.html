@@ -32,33 +32,31 @@
                 <input type="month" id="filter-date" class="form-control">
             </div>
             <div class="col-md-3">
-                <label class="form-label small fw-bold">Pilih Ruangan</label>
+                <label class="form-label small fw-bold">Ruangan</label>
                 <select id="filter-ruangan" class="form-select"><option value="">Semua Ruangan</option></select>
             </div>
             <div class="col-md-3">
-                <label class="form-label small fw-bold">Pilih Indikator</label>
+                <label class="form-label small fw-bold">Indikator</label>
                 <select id="filter-indikator" class="form-select"><option value="">Semua Indikator</option></select>
             </div>
             <div class="col-md-3 d-flex align-items-end">
-                <button class="btn btn-primary w-100 fw-bold" onclick="applyFilters()">Update Tampilan</button>
+                <button class="btn btn-primary w-100 fw-bold" onclick="applyFilters()">Tampilkan Data</button>
             </div>
         </div>
     </div>
 
     <div class="row">
-        <div class="col-md-6"><div class="card text-center p-4"><p class="text-muted mb-0">Total Observasi</p><div id="total-obs" class="stat-value">0</div></div></div>
+        <div class="col-md-6"><div class="card text-center p-4"><p class="text-muted mb-0">Total Indikator Teramati</p><div id="total-obs" class="stat-value">0</div></div></div>
         <div class="col-md-6"><div class="card text-center p-4"><p class="text-muted mb-0">Rata-rata Kepatuhan</p><div id="avg-compliance" class="stat-value text-primary">0%</div></div></div>
     </div>
 
     <div class="card p-4">
-        <h6 class="fw-bold mb-4 text-center">Grafik Kepatuhan per Indikator (%)</h6>
+        <h6 class="fw-bold mb-4 text-center">Persentase Kepatuhan per Indikator (%)</h6>
         <div class="chart-container"><canvas id="mainChart"></canvas></div>
     </div>
 
     <div class="card p-0 overflow-hidden">
-        <div class="table-responsive p-3">
-            <table id="inmTable" class="table table-hover w-100"></table>
-        </div>
+        <div class="table-responsive p-3"><table id="inmTable" class="table table-hover w-100"></table></div>
     </div>
 </div>
 
@@ -76,11 +74,11 @@
     let mainChart;
     let dataTable;
 
-    // --- PENGATURAN KOLOM (Sesuai urutan di Sheet Anda) ---
-    const COL_TGL = 2;       // Kolom C (Tanggal Pengumpulan Data)
-    const COL_RUANGAN = 3;   // Kolom D (Pilih Ruangan)
-    const COL_INDIKATOR = 4; // Kolom E (Pilih Pemantauan Indikator Mutu)
-    const COL_KEPATUHAN = 5; // Kolom F (Kepatuhan - Ya/Tidak)
+    // INDEKS BERDASARKAN KETERANGAN ANDA
+    const COL_TGL = 1;       // Kolom B
+    const COL_RUANGAN = 4;   // Kolom E
+    const COL_INDIKATOR = 5; // Kolom F
+    const COL_KEPATUHAN =; // Kolom G, H, J, L (Jawaban Ya/Tidak)
 
     function init() {
         Papa.parse(csvUrl, {
@@ -89,23 +87,17 @@
             skipEmptyLines: true,
             complete: function(results) {
                 if (results.data.length < 2) return;
-                
                 headers = results.data;
                 rawData = results.data.slice(1);
 
-                // Isi Dropdown Ruangan (Index 3)
-                const rooms = [...new Set(rawData.map(r => r[COL_RUANGAN]))].filter(Boolean).sort();
-                const roomEl = document.getElementById('filter-ruangan');
-                rooms.forEach(r => roomEl.add(new Option(r, r)));
-
-                // Isi Dropdown Indikator (Index 4)
-                const inds = [...new Set(rawData.map(r => r[COL_INDIKATOR]))].filter(Boolean).sort();
-                const indEl = document.getElementById('filter-indikator');
-                inds.forEach(i => indEl.add(new Option(i, i)));
-
-                // Set default bulan ke bulan berjalan
-                const now = new Date();
-                document.getElementById('filter-date').value = now.toISOString().substring(0, 7);
+                // Isi Dropdown
+                const fillDropdown = (id, idx) => {
+                    const list = [...new Set(rawData.map(r => r[idx]))].filter(Boolean).sort();
+                    const el = document.getElementById(id);
+                    list.forEach(item => el.add(new Option(item, item)));
+                };
+                fillDropdown('filter-ruangan', COL_RUANGAN);
+                fillDropdown('filter-indikator', COL_INDIKATOR);
 
                 applyFilters();
             }
@@ -118,7 +110,6 @@
         const fInd = document.getElementById('filter-indikator').value;
 
         const filtered = rawData.filter(row => {
-            // Cek Tanggal (Format di sheet biasanya M/D/YYYY atau YYYY-MM-DD)
             const dateStr = row[COL_TGL] || "";
             let matchDate = true;
             if(fDate && dateStr) {
@@ -126,48 +117,49 @@
                 const rowMonthYear = rowDate.getFullYear() + '-' + String(rowDate.getMonth() + 1).padStart(2, '0');
                 matchDate = rowMonthYear === fDate;
             }
-
-            const matchRoom = !fRoom || row[COL_RUANGAN] === fRoom;
-            const matchInd = !fInd || row[COL_INDIKATOR] === fInd;
-
-            return matchDate && matchRoom && matchInd;
+            return matchDate && (!fRoom || row[COL_RUANGAN] === fRoom) && (!fInd || row[COL_INDIKATOR] === fInd);
         });
-
         updateDisplay(filtered);
     }
 
     function updateDisplay(data) {
-        let yaCount = 0;
+        let totalCek = 0;
+        let totalYa = 0;
         const stats = {};
 
         data.forEach(row => {
             const ind = row[COL_INDIKATOR] || "Lainnya";
-            const val = (row[COL_KEPATUHAN] || "").toLowerCase().trim();
             if(!stats[ind]) stats[ind] = { ya: 0, total: 0 };
-            if(val === 'ya') { stats[ind].ya++; yaCount++; }
-            stats[ind].total++;
+
+            // Cek setiap kolom kepatuhan (G, H, J, L)
+            COL_KEPATUHAN.forEach(idx => {
+                const val = (row[idx] || "").toLowerCase().trim();
+                if(val === 'ya' || val === 'tidak') {
+                    stats[ind].total++;
+                    totalCek++;
+                    if(val === 'ya') {
+                        stats[ind].ya++;
+                        totalYa++;
+                    }
+                }
+            });
         });
 
-        document.getElementById('total-obs').innerText = data.length;
-        const avg = data.length > 0 ? ((yaCount/data.length)*100).toFixed(1) : 0;
+        document.getElementById('total-obs').innerText = totalCek;
+        const avg = totalCek > 0 ? ((totalYa/totalCek)*100).toFixed(1) : 0;
         document.getElementById('avg-compliance').innerText = avg + '%';
 
         const labels = Object.keys(stats);
-        const values = labels.map(l => ((stats[l].ya/stats[l].total)*100).toFixed(1));
+        const values = labels.map(l => stats[l].total > 0 ? ((stats[l].ya/stats[l].total)*100).toFixed(1) : 0);
 
         if(mainChart) mainChart.destroy();
         mainChart = new Chart(document.getElementById('mainChart'), {
             type: 'bar',
             data: {
                 labels: labels,
-                datasets: [{ label: '% Kepatuhan', data: values, backgroundColor: '#3498db', borderRadius: 5 }]
+                datasets: [{ label: '% Kepatuhan', data: values, backgroundColor: '#3498db' }]
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: { y: { beginAtZero: true, max: 100 } },
-                plugins: { legend: { display: false } }
-            }
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 100 } } }
         });
 
         if(dataTable) dataTable.destroy();
@@ -175,11 +167,10 @@
         dataTable = $('#inmTable').DataTable({
             data: data,
             columns: headers.map(h => ({ title: h })),
-            pageLength: 10,
-            order: [[0, 'desc']]
+            pageLength: 5,
+            order: [[COL_TGL, 'desc']]
         });
     }
-
     $(document).ready(init);
 </script>
 </body>
