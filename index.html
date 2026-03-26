@@ -56,7 +56,9 @@
     </div>
 
     <div class="card p-0 overflow-hidden">
-        <div class="table-responsive p-3"><table id="inmTable" class="table table-hover w-100"></table></div>
+        <div class="table-responsive p-3">
+            <table id="inmTable" class="table table-hover w-100"></table>
+        </div>
     </div>
 </div>
 
@@ -73,9 +75,12 @@
     let headers = [];
     let mainChart;
     let dataTable;
-    
-    // Variabel penampung posisi kolom
-    let colIdx = { tgl: 0, ruangan: 0, indikator: 0, kepatuhan: 0 };
+
+    // --- PENGATURAN KOLOM (Sesuai urutan di Sheet Anda) ---
+    const COL_TGL = 2;       // Kolom C (Tanggal Pengumpulan Data)
+    const COL_RUANGAN = 3;   // Kolom D (Pilih Ruangan)
+    const COL_INDIKATOR = 4; // Kolom E (Pilih Pemantauan Indikator Mutu)
+    const COL_KEPATUHAN = 5; // Kolom F (Kepatuhan - Ya/Tidak)
 
     function init() {
         Papa.parse(csvUrl, {
@@ -83,32 +88,24 @@
             header: false,
             skipEmptyLines: true,
             complete: function(results) {
+                if (results.data.length < 2) return;
+                
                 headers = results.data;
                 rawData = results.data.slice(1);
 
-                // MENCARI POSISI KOLOM SECARA OTOMATIS BERDASARKAN NAMA
-                headers.forEach((h, i) => {
-                    const title = h.toLowerCase();
-                    if(title.includes('pengumpulan data')) colIdx.tgl = i;
-                    if(title.includes('pilih ruangan')) colIdx.ruangan = i;
-                    if(title.includes('pemantauan indikator mutu')) colIdx.indikator = i;
-                    if(title.includes('kepatuhan')) colIdx.kepatuhan = i;
-                });
+                // Isi Dropdown Ruangan (Index 3)
+                const rooms = [...new Set(rawData.map(r => r[COL_RUANGAN]))].filter(Boolean).sort();
+                const roomEl = document.getElementById('filter-ruangan');
+                rooms.forEach(r => roomEl.add(new Option(r, r)));
 
-                // Jika auto-detect gagal, gunakan manual fallback (sesuai urutan umum)
-                if(colIdx.ruangan === 0) colIdx.ruangan = 3; 
-                if(colIdx.indikator === 0) colIdx.indikator = 4;
-                if(colIdx.kepatuhan === 0) colIdx.kepatuhan = 5;
+                // Isi Dropdown Indikator (Index 4)
+                const inds = [...new Set(rawData.map(r => r[COL_INDIKATOR]))].filter(Boolean).sort();
+                const indEl = document.getElementById('filter-indikator');
+                inds.forEach(i => indEl.add(new Option(i, i)));
 
-                // Isi Dropdown
-                const fillDropdown = (id, idx) => {
-                    const list = [...new Set(rawData.map(r => r[idx]))].filter(Boolean).sort();
-                    const el = document.getElementById(id);
-                    list.forEach(item => el.add(new Option(item, item)));
-                };
-                
-                fillDropdown('filter-ruangan', colIdx.ruangan);
-                fillDropdown('filter-indikator', colIdx.indikator);
+                // Set default bulan ke bulan berjalan
+                const now = new Date();
+                document.getElementById('filter-date').value = now.toISOString().substring(0, 7);
 
                 applyFilters();
             }
@@ -121,43 +118,56 @@
         const fInd = document.getElementById('filter-indikator').value;
 
         const filtered = rawData.filter(row => {
-            const dateStr = row[colIdx.tgl] || "";
-            const parts = dateStr.split(' ').split('/'); 
+            // Cek Tanggal (Format di sheet biasanya M/D/YYYY atau YYYY-MM-DD)
+            const dateStr = row[COL_TGL] || "";
             let matchDate = true;
-            if(fDate && parts.length === 3) {
-                // Asumsi format di Sheets: M/D/YYYY
-                const rowMonthYear = `${parts}-${parts.padStart(2, '0')}`;
+            if(fDate && dateStr) {
+                const rowDate = new Date(dateStr);
+                const rowMonthYear = rowDate.getFullYear() + '-' + String(rowDate.getMonth() + 1).padStart(2, '0');
                 matchDate = rowMonthYear === fDate;
             }
-            return matchDate && (!fRoom || row[colIdx.ruangan] === fRoom) && (!fInd || row[colIdx.indikator] === fInd);
+
+            const matchRoom = !fRoom || row[COL_RUANGAN] === fRoom;
+            const matchInd = !fInd || row[COL_INDIKATOR] === fInd;
+
+            return matchDate && matchRoom && matchInd;
         });
 
         updateDisplay(filtered);
     }
 
     function updateDisplay(data) {
-        let ya = 0;
+        let yaCount = 0;
         const stats = {};
+
         data.forEach(row => {
-            const ind = row[colIdx.indikator] || "Lainnya";
-            const val = (row[colIdx.kepatuhan] || "").toLowerCase().trim();
-            if(!stats[ind]) stats[ind] = { ya: 0, tot: 0 };
-            if(val === 'ya') { stats[ind].ya++; ya++; }
-            stats[ind].tot++;
+            const ind = row[COL_INDIKATOR] || "Lainnya";
+            const val = (row[COL_KEPATUHAN] || "").toLowerCase().trim();
+            if(!stats[ind]) stats[ind] = { ya: 0, total: 0 };
+            if(val === 'ya') { stats[ind].ya++; yaCount++; }
+            stats[ind].total++;
         });
 
         document.getElementById('total-obs').innerText = data.length;
-        const avg = data.length > 0 ? ((ya/data.length)*100).toFixed(1) : 0;
+        const avg = data.length > 0 ? ((yaCount/data.length)*100).toFixed(1) : 0;
         document.getElementById('avg-compliance').innerText = avg + '%';
 
         const labels = Object.keys(stats);
-        const values = labels.map(l => ((stats[l].ya/stats[l].tot)*100).toFixed(1));
+        const values = labels.map(l => ((stats[l].ya/stats[l].total)*100).toFixed(1));
 
         if(mainChart) mainChart.destroy();
         mainChart = new Chart(document.getElementById('mainChart'), {
             type: 'bar',
-            data: { labels: labels, datasets: [{ label: '% Kepatuhan', data: values, backgroundColor: '#3498db' }] },
-            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 100 } } }
+            data: {
+                labels: labels,
+                datasets: [{ label: '% Kepatuhan', data: values, backgroundColor: '#3498db', borderRadius: 5 }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true, max: 100 } },
+                plugins: { legend: { display: false } }
+            }
         });
 
         if(dataTable) dataTable.destroy();
@@ -165,10 +175,11 @@
         dataTable = $('#inmTable').DataTable({
             data: data,
             columns: headers.map(h => ({ title: h })),
-            pageLength: 5,
+            pageLength: 10,
             order: [[0, 'desc']]
         });
     }
+
     $(document).ready(init);
 </script>
 </body>
