@@ -1,54 +1,172 @@
-<div class="card p-4 shadow-sm mt-4">
-    <h5 class="fw-bold mb-3"><i class="bi bi-table"></i> Ringkasan Jumlah Observasi</h5>
-    <div class="table-responsive">
-        <table class="table table-bordered table-hover text-center">
-            <thead class="table-dark">
-                <tr>
-                    <th>Jenis Metode</th>
-                    <th>Total Observasi (Baris Data)</th>
-                    <th>Status Ketersediaan</th>
-                </tr>
-            </thead>
-            <tbody id="tabelRingkasan">
-                </tbody>
-        </table>
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoring Kebersihan Tangan - Puskesmas Cilincing</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <style>
+        body { background-color: #f4f7fa; padding: 20px; font-family: 'Segoe UI', sans-serif; }
+        .card { border-radius: 15px; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .header-box { background: #1e3c72; color: white; padding: 25px; border-radius: 15px; margin-bottom: 25px; text-align: center; }
+        .chart-container { height: 320px; position: relative; }
+        .table-custom thead { background-color: #1e3c72; color: white; }
+        #status-load { font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container-fluid">
+    <div class="header-box shadow">
+        <h2 class="fw-bold mb-1">📊 MONITORING KEBERSIHAN TANGAN</h2>
+        <p class="mb-0 opacity-75">Puskesmas Cilincing - Data Real-time dari Google Sheets</p>
+    </div>
+
+    <div id="status-load" class="alert alert-info text-center py-2">🔄 Menghubungkan ke data...</div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card p-4">
+                <h5 class="text-center text-primary fw-bold mb-3">Kepatuhan Handrub (%)</h5>
+                <div class="chart-container">
+                    <canvas id="chartHandrub"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card p-4">
+                <h5 class="text-center text-success fw-bold mb-3">Kepatuhan Handwash (%)</h5>
+                <div class="chart-container">
+                    <canvas id="chartHandwash"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card p-4 shadow-sm">
+        <h5 class="fw-bold mb-3">📋 Ringkasan Jumlah Penggunaan & Observasi</h5>
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover table-custom text-center">
+                <thead>
+                    <tr>
+                        <th>Jenis Metode</th>
+                        <th>Jumlah Observasi (Baris)</th>
+                        <th>Rata-rata Kepatuhan (%)</th>
+                    </tr>
+                </thead>
+                <tbody id="bodyTabel">
+                    </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
 <script>
-    // Tambahkan logika ini di dalam fungsi prosesStatistik(data) Anda
-    function updateTabelRingkasan(data) {
-        let countHR = 0;
-        let countHW = 0;
+    // Link CSV Spreadsheet Anda (Sheet1 / Gid 0)
+    const googleSheetCsv = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSHEu3HPY_7n3AJ9A-UaX-kz6Ouppr3x36oVGOunqZgzigTy2bCAYa83Rum7yBsA6AZHHyYO0BWe0RO/pub?gid=0&single=true&output=csv';
 
-        data.forEach(row => {
-            const indikator = (row || "").toLowerCase();
-            if (indikator.includes("handrub")) {
-                countHR++;
-            } else if (indikator.includes("handwash") || indikator.includes("cuci tangan")) {
-                countHW++;
+    function init() {
+        Papa.parse(googleSheetCsv, {
+            download: true,
+            header: false,
+            skipEmptyLines: true,
+            complete: function(results) {
+                if (results.data && results.data.length > 1) {
+                    $('#status-load').removeClass('alert-info').addClass('alert-success').text('✅ Data Berhasil Dimuat');
+                    prosesData(results.data.slice(1));
+                } else {
+                    $('#status-load').removeClass('alert-info').addClass('alert-warning').text('⚠️ Data terbaca, tapi sheet masih kosong.');
+                }
+            },
+            error: function() {
+                $('#status-load').removeClass('alert-info').addClass('alert-danger').text('❌ Gagal akses data. Cek pengaturan Publikasi Web.');
+            }
+        });
+    }
+
+    function prosesData(rows) {
+        const labels = ["Momen 1", "Momen 2", "Momen 3", "Momen 4", "Momen 5"];
+        
+        let hrYa =, hrTot =, countHR = 0;
+        let hwYa =, hwTot =, countHW = 0;
+
+        rows.forEach(row => {
+            const indikator = (row || "").toLowerCase(); // Kolom E
+            let isHR = indikator.includes("handrub");
+            let isHW = indikator.includes("handwash") || indikator.includes("cuci tangan");
+
+            if (isHR) countHR++;
+            if (isHW) countHW++;
+
+            // Hitung 5 Momen (Kolom F-J / Indeks 5-9)
+            for (let i = 0; i < 5; i++) {
+                let cell = (row[5 + i] || "").toLowerCase().trim();
+                if (cell === "") continue;
+
+                const patuh = cell.includes("ya") || cell.includes("sesuai") || cell === "5" || cell === "4";
+
+                if (isHR) {
+                    hrTot[i]++;
+                    if (patuh) hrYa[i]++;
+                } else if (isHW) {
+                    hwTot[i]++;
+                    if (patuh) hwYa[i]++;
+                }
             }
         });
 
-        const html = `
+        // Hitung Persentase untuk Grafik
+        const pHR = hrYa.map((v, i) => hrTot[i] > 0 ? (v / hrTot[i] * 100).toFixed(1) : 0);
+        const pHW = hwYa.map((v, i) => hwTot[i] > 0 ? (v / hwTot[i] * 100).toFixed(1) : 0);
+
+        // Hitung Rata-rata Kepatuhan Total untuk Tabel
+        const avgHR = pHR.reduce((a, b) => parseFloat(a) + parseFloat(b), 0) / 5;
+        const avgHW = pHW.reduce((a, b) => parseFloat(a) + parseFloat(b), 0) / 5;
+
+        // Update Tabel
+        const tabelHtml = `
             <tr>
-                <td class="text-start ps-4">✨ Handrub</td>
-                <td><strong>${countHR}</strong> kali</td>
-                <td><span class="badge ${countHR > 0 ? 'bg-success' : 'bg-danger'}">${countHR > 0 ? 'Tersedia' : 'Kosong'}</span></td>
+                <td class="text-start ps-4 fw-bold text-primary">Handrub ✨</td>
+                <td>${countHR} Observasi</td>
+                <td class="fw-bold">${avgHR.toFixed(1)}%</td>
             </tr>
             <tr>
-                <td class="text-start ps-4">🚰 Handwash</td>
-                <td><strong>${countHW}</strong> kali</td>
-                <td><span class="badge ${countHW > 0 ? 'bg-success' : 'bg-danger'}">${countHW > 0 ? 'Tersedia' : 'Kosong'}</span></td>
+                <td class="text-start ps-4 fw-bold text-success">Handwash 🚰</td>
+                <td>${countHW} Observasi</td>
+                <td class="fw-bold">${avgHW.toFixed(1)}%</td>
             </tr>
-            <tr class="table-light">
-                <td class="text-start ps-4 fw-bold">TOTAL SEMUA</td>
-                <td class="fw-bold">${countHR + countHW}</td>
+            <tr class="table-secondary fw-bold">
+                <td class="text-start ps-4">TOTAL DATA</td>
+                <td>${countHR + countHW} Baris</td>
                 <td>-</td>
             </tr>
         `;
-        document.getElementById('tabelRingkasan').innerHTML = html;
+        document.getElementById('bodyTabel').innerHTML = tabelHtml;
+
+        // Render Grafik
+        renderChart("chartHandrub", labels, pHR, "#3498db");
+        renderChart("chartHandwash", labels, pHW, "#27ae60");
     }
 
-    // Panggil fungsi updateTabelRingkasan(data) tepat setelah Papa.parse selesai
+    function renderChart(id, labels, data, color) {
+        new Chart(document.getElementById(id), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{ label: '% Kepatuhan', data: data, backgroundColor: color, borderRadius: 5 }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } } }
+            }
+        });
+    }
+
+    $(document).ready(init);
 </script>
+</body>
+</html>
