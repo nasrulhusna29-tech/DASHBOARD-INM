@@ -37,13 +37,6 @@
             </div>
         </div>
     </div>
-
-    <div class="card p-4 shadow-sm">
-        <h6 class="fw-bold mb-3">Data Observasi Terakhir</h6>
-        <div class="table-responsive">
-            <table id="tabelData" class="table table-sm table-striped w-100"></table>
-        </div>
-    </div>
 </div>
 
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
@@ -51,11 +44,11 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
 
 <script>
-    const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSHEu3HPY_7n3AJ9A-UaX-kz6Ouppr3x36oVGOunqZgzigTy2bCAYa83Rum7yBsA6AZHHyYO0BWe0RO/pub?gid=0&single=true&output=csv';
+    // Pastikan GID ini sesuai dengan tab yang berisi data (bukan tab kosong)
+    const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSHEu3HPY_7n3AJ9A-UaX-kz6Ouppr3x36oVGOunqZgzigTy2bCAYa83Rum7yBsA6AZHHyYO0BWe0RO/pub?gid=137717772&single=true&output=csv';
 
-    // Indeks Kolom berdasarkan Spreadsheet Anda
-    const COL_INDIKATOR = 4; // Kolom E (Pilihan Indikator)
-    const COL_START_JAWABAN = 5; // Kolom F ke kanan
+    const COL_INDIKATOR = 4; 
+    const COL_START_JAWABAN = 5; 
 
     function init() {
         Papa.parse(csvUrl, {
@@ -63,17 +56,18 @@
             header: false,
             skipEmptyLines: true,
             complete: function(results) {
-                const data = results.data.slice(1);
-                prosesGrafik(data, results.data);
+                if (results.data && results.data.length > 1) {
+                    const data = results.data.slice(1);
+                    prosesGrafik(data);
+                }
             }
         });
     }
 
-    function prosesGrafik(data, headers) {
-        // Objek untuk menyimpan hitungan momen
-        // Kita asumsikan momen ada di kolom F, G, H, I, J (Indeks 5-9)
+    function prosesGrafik(data) {
         const momenLabels = ["Sebelum Kontak", "Sebelum Tindakan", "Setelah Cairan Tubuh", "Setelah Kontak Pasien", "Setelah Kontak Lingkungan"];
         
+        // Perbaikan: Inisialisasi array dengan nol
         let handrubData =;
         let handwashData =;
         let totalHandrub =;
@@ -82,14 +76,12 @@
         data.forEach(row => {
             const indikator = (row[COL_INDIKATOR] || "").toLowerCase();
             
-            // Loop melalui kolom jawaban (momen)
             for (let i = 0; i < 5; i++) {
                 let val = (row[COL_START_JAWABAN + i] || "").toLowerCase().trim();
                 if (val === "") continue;
 
-                const isPatuh = val.includes("ya") || val.includes("sesuai") || val === "5";
+                const isPatuh = val.includes("ya") || val.includes("sesuai") || val === "5" || val === "4";
 
-                // Filter berdasarkan jenis indikator (Kebersihan Tangan)
                 if (indikator.includes("handrub")) {
                     totalHandrub[i]++;
                     if (isPatuh) handrubData[i]++;
@@ -100,7 +92,6 @@
             }
         });
 
-        // Hitung Persentase
         const finalHandrub = handrubData.map((v, i) => totalHandrub[i] > 0 ? (v / totalHandrub[i] * 100).toFixed(1) : 0);
         const finalHandwash = handwashData.map((v, i) => totalHandwash[i] > 0 ? (v / totalHandwash[i] * 100).toFixed(1) : 0);
 
@@ -109,7 +100,8 @@
     }
 
     function renderChart(id, labels, values, color) {
-        new Chart(document.getElementById(id), {
+        const ctx = document.getElementById(id).getContext('2d');
+        new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: labels,
