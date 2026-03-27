@@ -78,11 +78,11 @@
     let mainChart;
     let dataTable;
 
-    // KONFIGURASI KOLOM (Berdasarkan Google Form Anda)
-    const COL_TGL = 1;       // Kolom B
-    const COL_RUANGAN = 3;   // Kolom D (Unit/Ruangan)
-    const COL_INDIKATOR = 4; // Kolom E (Pilihan Indikator)
-    const COL_START_DATA = 5; // Data observasi dimulai dari Kolom F (Indeks 5) ke kanan
+    // KONFIGURASI KOLOM
+    const COL_TGL = 1;       
+    const COL_RUANGAN = 3;   
+    const COL_INDIKATOR = 4; 
+    const COL_START_DATA = 5; 
 
     function init() {
         Papa.parse(csvUrl, {
@@ -95,13 +95,14 @@
                 headers = results.data; 
                 rawData = results.data.slice(1);
 
+                // Populate Dropdowns
                 const roomList = [...new Set(rawData.map(r => r[COL_RUANGAN]))].filter(Boolean).sort();
-                const roomSelect = document.getElementById('filter-ruangan');
-                roomList.forEach(item => roomSelect.add(new Option(item, item)));
+                $('#filter-ruangan').empty().append('<option value="">Semua Ruangan</option>');
+                roomList.forEach(item => $('#filter-ruangan').append(new Option(item, item)));
 
                 const indList = [...new Set(rawData.map(r => r[COL_INDIKATOR]))].filter(Boolean).sort();
-                const indSelect = document.getElementById('filter-indikator');
-                indList.forEach(item => indSelect.add(new Option(item, item)));
+                $('#filter-indikator').empty().append('<option value="">Semua Indikator</option>');
+                indList.forEach(item => $('#filter-indikator').append(new Option(item, item)));
 
                 applyFilters();
             }
@@ -116,10 +117,14 @@
         const filtered = rawData.filter(row => {
             const dateStr = row[COL_TGL] || "";
             let matchDate = true;
+            
             if(fDate && dateStr) {
-                const rowDate = new Date(dateStr);
-                const rowMonthYear = rowDate.getFullYear() + '-' + String(rowDate.getMonth() + 1).padStart(2, '0');
-                matchDate = rowMonthYear === fDate;
+                // Konversi berbagai format tanggal ke YYYY-MM
+                const d = new Date(dateStr);
+                if (!isNaN(d.getTime())) {
+                    const rowMonthYear = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+                    matchDate = (rowMonthYear === fDate);
+                }
             }
             return matchDate && (!fRoom || row[COL_RUANGAN] === fRoom) && (!fInd || row[COL_INDIKATOR] === fInd);
         });
@@ -135,39 +140,26 @@
             const ind = row[COL_INDIKATOR] || "Lainnya";
             if(!stats[ind]) stats[ind] = { ya: 0, total: 0 };
 
-            // Loop semua kolom jawaban dari F sampai akhir (M)
             for (let i = COL_START_DATA; i < row.length; i++) {
                 let val = (row[i] || "").toLowerCase().trim();
-                
                 if(val !== "") { 
                     stats[ind].total++;
                     totalObs++;
-
-                    // LOGIKA PINTAR: Mencari kata kunci positif
-                    const isPositive = val.includes("ya") || 
-                                       val.includes("sesuai") || 
-                                       val.includes("lengkap") || 
-                                       val.includes("patuh") ||
-                                       val.includes("dilakukan") ||
-                                       val === "5" || val === "4";
-
-                    if(isPositive) {
-                        stats[ind].ya++;
-                        totalYa++;
-                    }
+                    // Logika deteksi "Ya"
+                    const isPositive = val.includes("ya") || val.includes("sesuai") || val.includes("lengkap") || val === "5" || val === "4";
+                    if(isPositive) { stats[ind].ya++; totalYa++; }
                 }
             }
         });
 
         const avg = totalObs > 0 ? ((totalYa/totalObs)*100).toFixed(1) : 0;
-        const avgEl = document.getElementById('avg-compliance');
-        avgEl.innerText = avg + '%';
-        avgEl.className = avg >= 80 ? "stat-value text-success" : "stat-value text-danger";
-        document.getElementById('total-obs').innerText = totalObs;
+        $('#avg-compliance').text(avg + '%').attr('class', avg >= 80 ? "stat-value text-success" : "stat-value text-danger");
+        $('#total-obs').text(totalObs);
 
         const labels = Object.keys(stats);
         const values = labels.map(l => stats[l].total > 0 ? ((stats[l].ya/stats[l].total)*100).toFixed(1) : 0);
 
+        // Chart
         if(mainChart) mainChart.destroy();
         mainChart = new Chart(document.getElementById('mainChart'), {
             type: 'bar',
@@ -176,19 +168,18 @@
                 datasets: [{ 
                     label: '% Kepatuhan', 
                     data: values, 
-                    backgroundColor: values.map(v => v >= 80 ? '#2ecc71' : '#e74c3c'),
-                    borderRadius: 5 
+                    backgroundColor: values.map(v => v >= 80 ? '#2ecc71' : '#e74c3c')
                 }]
             },
-            options: { 
-                responsive: true, 
-                maintainAspectRatio: false, 
-                scales: { y: { beginAtZero: true, max: 100 } }
-            }
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 100 } } }
         });
 
-        if(dataTable) dataTable.destroy();
-        $('#inmTable').empty();
+        // DataTable Fix: Destroy and Clear before re-init
+        if ($.fn.DataTable.isDataTable('#inmTable')) {
+            $('#inmTable').DataTable().destroy();
+            $('#inmTable').empty();
+        }
+        
         dataTable = $('#inmTable').DataTable({
             data: data,
             columns: headers.map((h, i) => ({ title: h, data: i })),
