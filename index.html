@@ -3,95 +3,134 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Data Monitoring INM</title>
+    <title>Analisis Kebersihan Tangan - Puskesmas Cilincing</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
     <style>
-        body { padding: 20px; background-color: #f4f7fa; font-family: 'Segoe UI', Tahoma, sans-serif; }
-        .table-card { background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); padding: 20px; margin-top: 20px; }
-        .header-title { color: #1e3c72; font-weight: 700; text-align: center; margin-bottom: 20px; }
-        /* Warna Header Tabel */
-        table.dataTable thead th { background-color: #1e3c72 !important; color: white !important; border: none; }
+        body { background-color: #f4f7fa; padding: 20px; font-family: 'Inter', sans-serif; }
+        .card { border: none; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .header-title { color: #1e3c72; font-weight: 700; text-align: center; margin-bottom: 30px; }
+        .chart-container { height: 350px; position: relative; }
+        .badge-info { background-color: #e3f2fd; color: #1e3c72; padding: 10px; border-radius: 10px; font-weight: 600; display: block; text-align: center; margin-bottom: 15px; }
     </style>
 </head>
 <body>
 
 <div class="container-fluid">
-    <div class="table-card">
-        <h3 class="header-title">📋 DATA MONITORING INM PUSKESMAS CILINCING</h3>
-        
-        <div id="loader" class="text-center py-5">
-            <div class="spinner-border text-primary" role="status"></div>
-            <p class="mt-2">Mengambil data dari Google Sheets...</p>
+    <h3 class="header-title">📊 MONITORING KEPATUHAN KEBERSIHAN TANGAN</h3>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card p-4 shadow-sm">
+                <span class="badge-info">✨ Kepatuhan Menggunakan HANDRUB</span>
+                <div class="chart-container">
+                    <canvas id="chartHandrub"></canvas>
+                </div>
+            </div>
         </div>
 
+        <div class="col-md-6">
+            <div class="card p-4 shadow-sm">
+                <span class="badge-info">🚰 Kepatuhan Menggunakan HANDWASH</span>
+                <div class="chart-container">
+                    <canvas id="chartHandwash"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card p-4 shadow-sm">
+        <h6 class="fw-bold mb-3">Data Observasi Terakhir</h6>
         <div class="table-responsive">
-            <table id="tabelINM" class="table table-striped table-bordered w-100" style="display:none;">
-                <thead></thead>
-                <tbody></tbody>
-            </table>
+            <table id="tabelData" class="table table-sm table-striped w-100"></table>
         </div>
     </div>
 </div>
 
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 
 <script>
-    // Link CSV dari Google Sheets Anda (Gid 137717772)
-    const linkData = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRfB8jU_z4znfSFDd83-1oPGnz_3jGHfdfeKLYJ-cm7cFc2MKImrTPXUMOWKUGCfYbzGnV8reqGGhfa/pub?gid=137717772&single=true&output=csv';
+    const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRfB8jU_z4znfSFDd83-1oPGnz_3jGHfdfeKLYJ-cm7cFc2MKImrTPXUMOWKUGCfYbzGnV8reqGGhfa/pub?gid=137717772&single=true&output=csv';
 
-    function loadDataKeTabel() {
-        Papa.parse(linkData, {
+    // Indeks Kolom berdasarkan Spreadsheet Anda
+    const COL_INDIKATOR = 4; // Kolom E (Pilihan Indikator)
+    const COL_START_JAWABAN = 5; // Kolom F ke kanan
+
+    function init() {
+        Papa.parse(csvUrl, {
             download: true,
             header: false,
             skipEmptyLines: true,
             complete: function(results) {
-                if (results.data && results.data.length > 0) {
-                    $('#loader').hide();
-                    $('#tabelINM').show();
-
-                    const judulKolom = results.data; // Baris 1
-                    const isiData = results.data.slice(1); // Baris 2 dst
-
-                    // MENGATASI ERROR "Cannot reinitialise DataTable"
-                    if ($.fn.DataTable.isDataTable('#tabelINM')) {
-                        $('#tabelINM').DataTable().destroy(); // Hancurkan tabel lama
-                        $('#tabelINM').empty(); // Kosongkan elemen
-                    }
-
-                    // Buat Tabel Baru
-                    $('#tabelINM').DataTable({
-                        data: isiData,
-                        columns: judulKolom.map((title, index) => ({ 
-                            title: title, 
-                            data: index,
-                            defaultContent: "-" 
-                        })),
-                        pageLength: 10,
-                        scrollX: true, // Scroll ke samping jika kolom banyak
-                        autoWidth: false,
-                        language: {
-                            url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/id.json"
-                        }
-                    });
-                } else {
-                    $('#loader').html('<div class="alert alert-warning">Data tidak ditemukan. Cek kembali Google Sheets Anda.</div>');
-                }
-            },
-            error: function() {
-                $('#loader').html('<div class="alert alert-danger">Gagal menghubungi Google Sheets. Pastikan link sudah di-Publish.</div>');
+                const data = results.data.slice(1);
+                prosesGrafik(data, results.data);
             }
         });
     }
 
-    // Jalankan saat halaman dibuka
-    $(document).ready(function() {
-        loadDataKeTabel();
-    });
+    function prosesGrafik(data, headers) {
+        // Objek untuk menyimpan hitungan momen
+        // Kita asumsikan momen ada di kolom F, G, H, I, J (Indeks 5-9)
+        const momenLabels = ["Sebelum Kontak", "Sebelum Tindakan", "Setelah Cairan Tubuh", "Setelah Kontak Pasien", "Setelah Kontak Lingkungan"];
+        
+        let handrubData =;
+        let handwashData =;
+        let totalHandrub =;
+        let totalHandwash =;
+
+        data.forEach(row => {
+            const indikator = (row[COL_INDIKATOR] || "").toLowerCase();
+            
+            // Loop melalui kolom jawaban (momen)
+            for (let i = 0; i < 5; i++) {
+                let val = (row[COL_START_JAWABAN + i] || "").toLowerCase().trim();
+                if (val === "") continue;
+
+                const isPatuh = val.includes("ya") || val.includes("sesuai") || val === "5";
+
+                // Filter berdasarkan jenis indikator (Kebersihan Tangan)
+                if (indikator.includes("handrub")) {
+                    totalHandrub[i]++;
+                    if (isPatuh) handrubData[i]++;
+                } else if (indikator.includes("handwash") || indikator.includes("cuci tangan")) {
+                    totalHandwash[i]++;
+                    if (isPatuh) handwashData[i]++;
+                }
+            }
+        });
+
+        // Hitung Persentase
+        const finalHandrub = handrubData.map((v, i) => totalHandrub[i] > 0 ? (v / totalHandrub[i] * 100).toFixed(1) : 0);
+        const finalHandwash = handwashData.map((v, i) => totalHandwash[i] > 0 ? (v / totalHandwash[i] * 100).toFixed(1) : 0);
+
+        renderChart("chartHandrub", momenLabels, finalHandrub, "#3498db");
+        renderChart("chartHandwash", momenLabels, finalHandwash, "#2ecc71");
+    }
+
+    function renderChart(id, labels, values, color) {
+        new Chart(document.getElementById(id), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: '% Kepatuhan',
+                    data: values,
+                    backgroundColor: color,
+                    borderRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } }
+                }
+            }
+        });
+    }
+
+    $(document).ready(init);
 </script>
 </body>
 </html>
