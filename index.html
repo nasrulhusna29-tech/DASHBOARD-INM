@@ -3,40 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Pemantauan Indikator Mutu</title>
+    <title>Dashboard Mutu - Puskesmas Cilincing</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background-color: #f8f9fa; padding: 25px; font-family: 'Segoe UI', sans-serif; }
-        .card { border-radius: 12px; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 25px; }
-        .header-title { background: #1e3c72; color: white; padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 20px; }
-        .table thead { background-color: #f1f3f5; color: #495057; font-weight: bold; }
-        .table-footer { background-color: #e9ecef; font-weight: bold; }
-        .badge-count { background-color: #1e3c72; color: white; padding: 5px 10px; border-radius: 8px; }
+        body { background-color: #f4f7fa; padding: 25px; font-family: 'Segoe UI', sans-serif; }
+        .card { border-radius: 15px; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.08); margin-bottom: 25px; }
+        .header-title { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white; padding: 20px; border-radius: 15px; text-align: center; margin-bottom: 25px; }
+        .filter-box { background: white; padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #dee2e6; }
+        .table thead { background-color: #f8f9fa; }
+        .fw-bold-blue { color: #1e3c72; font-weight: 700; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="header-title shadow">
-        <h3 class="mb-0">📋 TABEL PEMANTAUAN INDIKATOR MUTU</h3>
+        <h3 class="mb-0">📊 DASHBOARD PEMANTAUAN INDIKATOR MUTU</h3>
+        <p class="mb-0 opacity-75">Puskesmas Kecamatan Cilincing</p>
+    </div>
+
+    <div class="filter-box shadow-sm">
+        <label for="filterRuangan" class="form-label fw-bold">📍 Filter Berdasarkan Ruangan:</label>
+        <select id="filterRuangan" class="form-select form-select-lg">
+            <option value="Semua">-- Tampilkan Semua Ruangan --</option>
+        </select>
     </div>
 
     <div class="card p-4">
-        <h5 class="fw-bold mb-3">Ringkasan Indikator Mutu</h5>
+        <h5 class="fw-bold-blue mb-3">1. Ringkasan Indikator Mutu</h5>
         <div class="table-responsive">
             <table class="table table-bordered align-middle">
                 <thead>
-                    <tr>
-                        <th>Pilih Pemantauan Indikator Mutu</th>
-                        <th class="text-center">Total Observasi</th>
+                    <tr class="text-center">
+                        <th class="text-start">Indikator Mutu</th>
+                        <th>Total Observasi</th>
                     </tr>
                 </thead>
-                <tbody id="tabelRingkasan">
-                    </tbody>
-                <tfoot class="table-footer">
+                <tbody id="tabelRingkasan"></tbody>
+                <tfoot class="table-light fw-bold text-center">
                     <tr>
-                        <td>Grand Total</td>
-                        <td class="text-center" id="grandTotalAtas">0</td>
+                        <td class="text-start">Grand Total</td>
+                        <td id="grandTotal">0</td>
                     </tr>
                 </tfoot>
             </table>
@@ -44,7 +51,7 @@
     </div>
 
     <div class="card p-4">
-        <h5 class="fw-bold mb-3">Detail Kepatuhan Kebersihan Tangan</h5>
+        <h5 class="fw-bold-blue mb-3">2. Detail Kepatuhan Kebersihan Tangan</h5>
         <div class="table-responsive">
             <table class="table table-bordered align-middle text-center">
                 <thead>
@@ -55,8 +62,7 @@
                         <th>Tidak Melakukan</th>
                     </tr>
                 </thead>
-                <tbody id="tabelDetail">
-                    </tbody>
+                <tbody id="tabelDetail"></tbody>
             </table>
         </div>
     </div>
@@ -66,7 +72,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
 
 <script>
-    const url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSHEu3HPY_7n3AJ9A-UaX-kz6Ouppr3x36oVGOunqZgzigTy2bCAYa83Rum7yBsA6AZHHyYO0BWe0RO/pub?gid=0&single=true&output=csv';
+    const url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSHEu3HPY_7n3AJ9A-UaX-kz6Ouppr3x36oVGOunqZgzigTy2bCAYa83Rum7yBsA6AZHHyYO0BWe0RO/pub?output=csv';
+    let dataGlobal = [];
 
     function init() {
         Papa.parse(url, {
@@ -74,47 +81,65 @@
             header: false,
             complete: function(results) {
                 if (results.data.length > 1) {
-                    renderTable(results.data.slice(1));
+                    dataGlobal = results.data.slice(1);
+                    populateFilter(dataGlobal);
+                    prosesData("Semua");
                 }
             }
         });
     }
 
-    function renderTable(rows) {
+    // Mengambil daftar ruangan unik untuk dropdown (Kolom B / Indeks 1)
+    function populateFilter(data) {
+        let ruanganSet = new Set();
+        data.forEach(row => {
+            if(row) ruanganSet.add(row.trim());
+        });
+
+        let sortedRuangan = Array.from(ruanganSet).sort();
+        sortedRuangan.forEach(r => {
+            $('#filterRuangan').append(`<option value="${r}">${r}</option>`);
+        });
+    }
+
+    function prosesData(ruanganTerpilih) {
         let stats = {
             "Kepatuhan Identifikasi Pasien": { total: 0, hr: 0, hw: 0, tdk: 0 },
             "Kepatuhan Kebersihan Tangan": { total: 0, hr: 0, hw: 0, tdk: 0 },
             "Kepatuhan Penggunaan APD": { total: 0, hr: 0, hw: 0, tdk: 0 }
         };
 
-        rows.forEach(row => {
+        let filteredData = dataGlobal;
+        if (ruanganTerpilih !== "Semua") {
+            filteredData = dataGlobal.filter(row => row === ruanganTerpilih);
+        }
+
+        filteredData.forEach(row => {
             const indikator = (row || "").trim(); // Kolom E
             const rowText = row.join(" ").toLowerCase();
 
             if (stats[indikator]) {
                 stats[indikator].total++;
-                
-                // Hitung detail jika itu kebersihan tangan
                 if (rowText.includes("handrub")) stats[indikator].hr++;
                 if (rowText.includes("handwash") || rowText.includes("cuci tangan")) stats[indikator].hw++;
                 if (rowText.includes("tidak melakukan")) stats[indikator].tdk++;
             }
         });
 
-        // Isi Tabel Ringkasan
-        let htmlAtas = "";
-        let totalSemuaAtas = 0;
+        // Update Tabel Ringkasan
+        let htmlRingkasan = "";
+        let grandTotal = 0;
         for (let key in stats) {
-            htmlAtas += `<tr><td>${key}</td><td class="text-center">${stats[key].total}</td></tr>`;
-            totalSemuaAtas += stats[key].total;
+            htmlRingkasan += `<tr><td>${key}</td><td class="text-center">${stats[key].total}</td></tr>`;
+            grandTotal += stats[key].total;
         }
-        $('#tabelRingkasan').html(htmlAtas);
-        $('#grandTotalAtas').text(totalSemuaAtas);
+        $('#tabelRingkasan').html(htmlRingkasan);
+        $('#grandTotal').text(grandTotal);
 
-        // Isi Tabel Detail
-        let htmlBawah = "";
+        // Update Tabel Detail
+        let htmlDetail = "";
         for (let key in stats) {
-            htmlBawah += `
+            htmlDetail += `
                 <tr>
                     <td class="text-start">${key}</td>
                     <td>${stats[key].hr}</td>
@@ -122,8 +147,13 @@
                     <td>${stats[key].tdk}</td>
                 </tr>`;
         }
-        $('#tabelDetail').html(htmlBawah);
+        $('#tabelDetail').html(htmlDetail);
     }
+
+    // Event saat filter diubah
+    $('#filterRuangan').on('change', function() {
+        prosesData($(this).val());
+    });
 
     $(document).ready(init);
 </script>
