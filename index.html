@@ -3,124 +3,106 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Analisis Kebersihan Tangan - Puskesmas Cilincing</title>
+    <title>Dashboard INM Puskesmas Cilincing</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
     <style>
-        body { background-color: #f4f7fa; padding: 20px; font-family: 'Segoe UI', sans-serif; }
-        .card { border: none; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        .header-title { color: #1e3c72; font-weight: 700; text-align: center; margin-bottom: 30px; text-transform: uppercase; }
+        body { background-color: #f4f7fa; padding: 20px; font-family: sans-serif; }
+        .card { border-radius: 15px; border: none; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
         .chart-container { height: 350px; position: relative; }
-        .status-badge { padding: 10px; border-radius: 10px; font-weight: 600; text-align: center; margin-bottom: 20px; }
+        .header-title { color: #1e3c72; font-weight: 700; text-align: center; margin-bottom: 20px; }
     </style>
 </head>
 <body>
 
 <div class="container-fluid">
-    <h3 class="header-title">📊 Monitoring Kepatuhan Kebersihan Tangan</h3>
-
-    <div id="status-box" class="alert alert-secondary text-center">Menghubungkan ke Google Sheets...</div>
+    <h3 class="header-title">📊 MONITORING KEPATUHAN KEBERSIHAN TANGAN</h3>
+    
+    <div id="loading-status" class="alert alert-info text-center">Menghubungkan ke Google Sheets...</div>
 
     <div class="row">
         <div class="col-md-6">
-            <div class="card p-4 shadow-sm">
-                <h5 class="text-center text-primary fw-bold mb-3">Metode Handrub (%)</h5>
-                <div class="chart-container">
-                    <canvas id="chartHandrub"></canvas>
-                </div>
+            <div class="card p-4">
+                <h5 class="text-center text-primary mb-3">HANDRUB (%)</h5>
+                <div class="chart-container"><canvas id="chartHandrub"></canvas></div>
             </div>
         </div>
-
         <div class="col-md-6">
-            <div class="card p-4 shadow-sm">
-                <h5 class="text-center text-success fw-bold mb-3">Metode Handwash (%)</h5>
-                <div class="chart-container">
-                    <canvas id="chartHandwash"></canvas>
-                </div>
+            <div class="card p-4">
+                <h5 class="text-center text-success mb-3">HANDWASH (%)</h5>
+                <div class="chart-container"><canvas id="chartHandwash"></canvas></div>
             </div>
         </div>
     </div>
 </div>
 
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+
 <script>
-    // Link CSV dari Spreadsheet yang Anda berikan
-    const publicUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSHEu3HPY_7n3AJ9A-UaX-kz6Ouppr3x36oVGOunqZgzigTy2bCAYa83Rum7yBsA6AZHHyYO0BWe0RO/pub?gid=0&single=true&output=csv';
+    // Link CSV dari gambar Anda
+    const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSHEu3HPY_7n3AJ9A-UaX-kz6Ouppr3x36oVGOunqZgzigTy2bCAYa83Rum7yBsA6AZHHyYO0BWe0RO/pub?gid=0&single=true&output=csv';
 
     function init() {
-        Papa.parse(publicUrl, {
+        Papa.parse(csvUrl, {
             download: true,
             header: false,
-            skipEmptyLines: true,
             complete: function(results) {
-                if (results.data && results.data.length > 1) {
-                    $('#status-box').removeClass('alert-secondary').addClass('alert-success').text('✅ Data Berhasil Dimuat');
-                    renderDashboard(results.data.slice(1));
+                const data = results.data;
+                if (data.length > 1) {
+                    $('#loading-status').hide();
+                    renderGrafik(data.slice(1));
                 } else {
-                    $('#status-box').addClass('alert-warning').text('⚠️ Data ditemukan tetapi isinya kosong.');
+                    $('#loading-status').removeClass('alert-info').addClass('alert-danger').text('Data Kosong atau Link Salah');
                 }
             },
             error: function() {
-                $('#status-box').addClass('alert-danger').text('❌ Gagal memuat data. Pastikan opsi "Publikasikan ke Web" sudah aktif.');
+                $('#loading-status').removeClass('alert-info').addClass('alert-danger').text('Gagal Terhubung ke Google Sheets');
             }
         });
     }
 
-    function renderDashboard(rows) {
+    function renderGrafik(rows) {
         const labels = ["Momen 1", "Momen 2", "Momen 3", "Momen 4", "Momen 5"];
-        
-        // Inisialisasi hitungan patuh dan total observasi
-        let hrPatuh =, hrTotal =;
-        let hwPatuh =, hwTotal =;
+        let hrYa =, hrTot =;
+        let hwYa =, hwTot =;
 
         rows.forEach(row => {
-            const indikator = (row || "").toLowerCase(); // Kolom E (Indikator)
-            
+            const indikator = (row || "").toLowerCase(); // Kolom E
             for (let i = 0; i < 5; i++) {
-                let jawaban = (row[5 + i] || "").toLowerCase().trim(); // Kolom F - J
-                if (jawaban === "") continue;
+                let cell = (row[5 + i] || "").toLowerCase().trim(); // Kolom F-J
+                if (cell === "") continue;
 
-                // Logika patuh: jika jawaban mengandung kata positif
-                const isPatuh = jawaban.includes("ya") || jawaban.includes("sesuai") || jawaban === "5" || jawaban === "4";
+                const patuh = cell.includes("ya") || cell.includes("sesuai") || cell === "5" || cell === "4";
 
                 if (indikator.includes("handrub")) {
-                    hrTotal[i]++;
-                    if (isPatuh) hrPatuh[i]++;
+                    hrTot[i]++;
+                    if (patuh) hrYa[i]++;
                 } else if (indikator.includes("handwash") || indikator.includes("cuci tangan")) {
-                    hwTotal[i]++;
-                    if (isPatuh) hwPatuh[i]++;
+                    hwTot[i]++;
+                    if (patuh) hwYa[i]++;
                 }
             }
         });
 
-        // Hitung persentase kepatuhan
-        const dataHR = hrPatuh.map((v, i) => hrTotal[i] > 0 ? (v / hrTotal[i] * 100).toFixed(1) : 0);
-        const dataHW = hwPatuh.map((v, i) => hwTotal[i] > 0 ? (v / hwTotal[i] * 100).toFixed(1) : 0);
+        const pHR = hrYa.map((v, i) => hrTot[i] > 0 ? (v / hrTot[i] * 100).toFixed(1) : 0);
+        const pHW = hwYa.map((v, i) => hwTot[i] > 0 ? (v / hwTotal[i] * 100).toFixed(1) : 0);
 
-        buatChart("chartHandrub", labels, dataHR, "#3498db");
-        buatChart("chartHandwash", labels, dataHW, "#2ecc71");
+        buatChart("chartHandrub", labels, pHR, "#3498db");
+        buatChart("chartHandwash", labels, pHW, "#2ecc71");
     }
 
     function buatChart(id, labels, data, color) {
-        const ctx = document.getElementById(id).getContext('2d');
-        new Chart(ctx, {
+        new Chart(document.getElementById(id), {
             type: 'bar',
             data: {
                 labels: labels,
-                datasets: [{
-                    label: '% Kepatuhan',
-                    data: data,
-                    backgroundColor: color,
-                    borderRadius: 5
-                }]
+                datasets: [{ label: '% Kepatuhan', data: data, backgroundColor: color }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                scales: {
-                    y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } }
-                }
+                scales: { y: { beginAtZero: true, max: 100 } }
             }
         });
     }
