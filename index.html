@@ -21,27 +21,55 @@
         <p class="mb-0 opacity-75">Puskesmas Kecamatan Cilincing</p>
     </div>
 
-    <div class="filter-box shadow-sm text-center">
-        <label class="form-label fw-bold">📍 Filter Berdasarkan Ruangan:</label>
-        <select id="filterRuangan" class="form-select form-select-lg w-50 mx-auto">
-            <option value="Semua">-- Tampilkan Semua Ruangan --</option>
-        </select>
+    <div class="filter-box shadow-sm">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label fw-bold">📍 Ruangan:</label>
+                <select id="filterRuangan" class="form-select">
+                    <option value="Semua">Semua Ruangan</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label fw-bold">📅 Bulan:</label>
+                <select id="filterBulan" class="form-select">
+                    <option value="Semua">Semua Bulan</option>
+                    <option value="0">Januari</option>
+                    <option value="1">Februari</option>
+                    <option value="2">Maret</option>
+                    <option value="3">April</option>
+                    <option value="4">Mei</option>
+                    <option value="5">Juni</option>
+                    <option value="6">Juli</option>
+                    <option value="7">Agustus</option>
+                    <option value="8">September</option>
+                    <option value="9">Oktober</option>
+                    <option value="10">November</option>
+                    <option value="11">Desember</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label fw-bold">🗓️ Tahun:</label>
+                <select id="filterTahun" class="form-select">
+                    <option value="Semua">Semua Tahun</option>
+                </select>
+            </div>
+        </div>
     </div>
 
     <div class="card p-4">
         <h5 class="fw-bold text-primary mb-3">1. Ringkasan Indikator Mutu</h5>
-        <table class="table table-bordered align-middle">
+        <table class="table table-bordered align-middle text-center">
             <thead>
                 <tr>
-                    <th>Indikator Mutu</th>
-                    <th class="text-center">Total Observasi</th>
+                    <th class="text-start">Indikator Mutu</th>
+                    <th>Total Observasi</th>
                 </tr>
             </thead>
             <tbody id="tabelRingkasan"></tbody>
             <tfoot class="table-light fw-bold">
                 <tr>
-                    <td>Grand Total</td>
-                    <td class="text-center" id="grandTotal">0</td>
+                    <td class="text-start">Grand Total</td>
+                    <td id="grandTotal">0</td>
                 </tr>
             </tfoot>
         </table>
@@ -73,37 +101,60 @@
     function init() {
         Papa.parse(url, {
             download: true,
-            header: true, // Menggunakan header agar lebih akurat
+            header: true,
             complete: function(results) {
                 if (results.data.length > 0) {
-                    rawData = results.data;
-                    setupFilter(rawData);
-                    updateDashboard("Semua");
+                    // Membersihkan data kosong dan menambahkan properti Date
+                    rawData = results.data.filter(d => d["Timestamp"]).map(d => {
+                        let dateObj = new Date(d["Timestamp"]);
+                        return { 
+                            ...d, 
+                            _month: dateObj.getMonth().toString(), 
+                            _year: dateObj.getFullYear().toString() 
+                        };
+                    });
+                    
+                    setupFilters(rawData);
+                    updateDashboard();
                 }
             }
         });
     }
 
-    function setupFilter(data) {
+    function setupFilters(data) {
+        // Setup Filter Ruangan
         let listRuangan = [...new Set(data.map(item => item["Pilih Ruangan"]).filter(Boolean))].sort();
         listRuangan.forEach(r => $('#filterRuangan').append(`<option value="${r}">${r}</option>`));
+
+        // Setup Filter Tahun (Otomatis dari data yang ada)
+        let listTahun = [...new Set(data.map(item => item._year).filter(Boolean))].sort((a,b) => b-a);
+        listTahun.forEach(t => $('#filterTahun').append(`<option value="${t}">${t}</option>`));
     }
 
-    function updateDashboard(filter) {
+    function updateDashboard() {
+        const fRuangan = $('#filterRuangan').val();
+        const fBulan = $('#filterBulan').val();
+        const fTahun = $('#filterTahun').val();
+
         let summary = {
             "Kepatuhan Identifikasi Pasien": { total: 0, hr: 0, hw: 0, tdk: 0 },
             "Kepatuhan Kebersihan Tangan": { total: 0, hr: 0, hw: 0, tdk: 0 },
             "Kepatuhan Penggunaan APD": { total: 0, hr: 0, hw: 0, tdk: 0 }
         };
 
-        let filtered = filter === "Semua" ? rawData : rawData.filter(d => d["Pilih Ruangan"] === filter);
+        // Logika Filter Berlapis
+        let filtered = rawData.filter(d => {
+            let matchRuangan = (fRuangan === "Semua" || d["Pilih Ruangan"] === fRuangan);
+            let matchBulan = (fBulan === "Semua" || d._month === fBulan);
+            let matchTahun = (fTahun === "Semua" || d._year === fTahun);
+            return matchRuangan && matchBulan && matchTahun;
+        });
 
         filtered.forEach(row => {
             let kpi = row["Pilih Pemantauan Indikator Mutu"];
             if (summary[kpi]) {
                 summary[kpi].total++;
                 
-                // Logika pencarian Handrub/Handwash di seluruh baris
                 let fullRow = JSON.stringify(row).toLowerCase();
                 if (fullRow.includes("handrub")) summary[kpi].hr++;
                 if (fullRow.includes("handwash") || fullRow.includes("cuci tangan")) summary[kpi].hw++;
@@ -114,7 +165,7 @@
         // Tampilkan Tabel 1
         let html1 = ""; let gTotal = 0;
         for (let key in summary) {
-            html1 += `<tr><td>${key}</td><td class="text-center">${summary[key].total}</td></tr>`;
+            html1 += `<tr><td class="text-start">${key}</td><td>${summary[key].total}</td></tr>`;
             gTotal += summary[key].total;
         }
         $('#tabelRingkasan').html(html1);
@@ -128,7 +179,9 @@
         $('#tabelDetail').html(html2);
     }
 
-    $('#filterRuangan').change(function() { updateDashboard($(this).val()); });
+    // Listener untuk semua filter
+    $('#filterRuangan, #filterBulan, #filterTahun').change(updateDashboard);
+    
     $(document).ready(init);
 </script>
 </body>
