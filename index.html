@@ -8,63 +8,58 @@
     <style>
         body { background-color: #f4f7fa; padding: 25px; font-family: 'Segoe UI', sans-serif; }
         .card { border-radius: 15px; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.08); margin-bottom: 25px; }
-        .header-title { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white; padding: 20px; border-radius: 15px; text-align: center; margin-bottom: 25px; }
+        .header-title { background: #1e3c72; color: white; padding: 20px; border-radius: 15px; text-align: center; margin-bottom: 25px; }
         .filter-box { background: white; padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #dee2e6; }
-        .table thead { background-color: #f8f9fa; }
-        .fw-bold-blue { color: #1e3c72; font-weight: 700; }
+        .table thead { background-color: #f8f9fa; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="header-title shadow">
-        <h3 class="mb-0">📊 DASHBOARD PEMANTAUAN INDIKATOR MUTU</h3>
+        <h3 class="mb-1">📊 DASHBOARD PEMANTAUAN INDIKATOR MUTU</h3>
         <p class="mb-0 opacity-75">Puskesmas Kecamatan Cilincing</p>
     </div>
 
-    <div class="filter-box shadow-sm">
-        <label for="filterRuangan" class="form-label fw-bold">📍 Filter Berdasarkan Ruangan:</label>
-        <select id="filterRuangan" class="form-select form-select-lg">
+    <div class="filter-box shadow-sm text-center">
+        <label class="form-label fw-bold">📍 Filter Berdasarkan Ruangan:</label>
+        <select id="filterRuangan" class="form-select form-select-lg w-50 mx-auto">
             <option value="Semua">-- Tampilkan Semua Ruangan --</option>
         </select>
     </div>
 
     <div class="card p-4">
-        <h5 class="fw-bold-blue mb-3">1. Ringkasan Indikator Mutu</h5>
-        <div class="table-responsive">
-            <table class="table table-bordered align-middle">
-                <thead>
-                    <tr class="text-center">
-                        <th class="text-start">Indikator Mutu</th>
-                        <th>Total Observasi</th>
-                    </tr>
-                </thead>
-                <tbody id="tabelRingkasan"></tbody>
-                <tfoot class="table-light fw-bold text-center">
-                    <tr>
-                        <td class="text-start">Grand Total</td>
-                        <td id="grandTotal">0</td>
-                    </tr>
-                </tfoot>
-            </table>
-        </div>
+        <h5 class="fw-bold text-primary mb-3">1. Ringkasan Indikator Mutu</h5>
+        <table class="table table-bordered align-middle">
+            <thead>
+                <tr>
+                    <th>Indikator Mutu</th>
+                    <th class="text-center">Total Observasi</th>
+                </tr>
+            </thead>
+            <tbody id="tabelRingkasan"></tbody>
+            <tfoot class="table-light fw-bold">
+                <tr>
+                    <td>Grand Total</td>
+                    <td class="text-center" id="grandTotal">0</td>
+                </tr>
+            </tfoot>
+        </table>
     </div>
 
     <div class="card p-4">
-        <h5 class="fw-bold-blue mb-3">2. Detail Kepatuhan Kebersihan Tangan</h5>
-        <div class="table-responsive">
-            <table class="table table-bordered align-middle text-center">
-                <thead>
-                    <tr>
-                        <th class="text-start">Indikator Mutu</th>
-                        <th>Handrub</th>
-                        <th>Handwash</th>
-                        <th>Tidak Melakukan</th>
-                    </tr>
-                </thead>
-                <tbody id="tabelDetail"></tbody>
-            </table>
-        </div>
+        <h5 class="fw-bold text-primary mb-3">2. Detail Kepatuhan Kebersihan Tangan</h5>
+        <table class="table table-bordered align-middle text-center">
+            <thead>
+                <tr>
+                    <th class="text-start">Indikator Mutu</th>
+                    <th>Handrub</th>
+                    <th>Handwash</th>
+                    <th>Tidak Melakukan</th>
+                </tr>
+            </thead>
+            <tbody id="tabelDetail"></tbody>
+        </table>
     </div>
 </div>
 
@@ -72,89 +67,68 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
 
 <script>
-    const url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSHEu3HPY_7n3AJ9A-UaX-kz6Ouppr3x36oVGOunqZgzigTy2bCAYa83Rum7yBsA6AZHHyYO0BWe0RO/pub?output=csv';
-    let dataGlobal = [];
+    const url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSHEu3HPY_7n3AJ9A-UaX-kz6Ouppr3x36oVGOunqZgzigTy2bCAYa83Rum7yBsA6AZHHyYO0BWe0RO/pub?gid=0&single=true&output=csv';
+    let rawData = [];
 
     function init() {
         Papa.parse(url, {
             download: true,
-            header: false,
+            header: true, // Menggunakan header agar lebih akurat
             complete: function(results) {
-                if (results.data.length > 1) {
-                    dataGlobal = results.data.slice(1);
-                    populateFilter(dataGlobal);
-                    prosesData("Semua");
+                if (results.data.length > 0) {
+                    rawData = results.data;
+                    setupFilter(rawData);
+                    updateDashboard("Semua");
                 }
             }
         });
     }
 
-    // Mengambil daftar ruangan unik untuk dropdown (Kolom B / Indeks 1)
-    function populateFilter(data) {
-        let ruanganSet = new Set();
-        data.forEach(row => {
-            if(row) ruanganSet.add(row.trim());
-        });
-
-        let sortedRuangan = Array.from(ruanganSet).sort();
-        sortedRuangan.forEach(r => {
-            $('#filterRuangan').append(`<option value="${r}">${r}</option>`);
-        });
+    function setupFilter(data) {
+        let listRuangan = [...new Set(data.map(item => item["Pilih Ruangan"]).filter(Boolean))].sort();
+        listRuangan.forEach(r => $('#filterRuangan').append(`<option value="${r}">${r}</option>`));
     }
 
-    function prosesData(ruanganTerpilih) {
-        let stats = {
+    function updateDashboard(filter) {
+        let summary = {
             "Kepatuhan Identifikasi Pasien": { total: 0, hr: 0, hw: 0, tdk: 0 },
             "Kepatuhan Kebersihan Tangan": { total: 0, hr: 0, hw: 0, tdk: 0 },
             "Kepatuhan Penggunaan APD": { total: 0, hr: 0, hw: 0, tdk: 0 }
         };
 
-        let filteredData = dataGlobal;
-        if (ruanganTerpilih !== "Semua") {
-            filteredData = dataGlobal.filter(row => row === ruanganTerpilih);
-        }
+        let filtered = filter === "Semua" ? rawData : rawData.filter(d => d["Pilih Ruangan"] === filter);
 
-        filteredData.forEach(row => {
-            const indikator = (row || "").trim(); // Kolom E
-            const rowText = row.join(" ").toLowerCase();
-
-            if (stats[indikator]) {
-                stats[indikator].total++;
-                if (rowText.includes("handrub")) stats[indikator].hr++;
-                if (rowText.includes("handwash") || rowText.includes("cuci tangan")) stats[indikator].hw++;
-                if (rowText.includes("tidak melakukan")) stats[indikator].tdk++;
+        filtered.forEach(row => {
+            let kpi = row["Pilih Pemantauan Indikator Mutu"];
+            if (summary[kpi]) {
+                summary[kpi].total++;
+                
+                // Logika pencarian Handrub/Handwash di seluruh baris
+                let fullRow = JSON.stringify(row).toLowerCase();
+                if (fullRow.includes("handrub")) summary[kpi].hr++;
+                if (fullRow.includes("handwash") || fullRow.includes("cuci tangan")) summary[kpi].hw++;
+                if (fullRow.includes("tidak melakukan")) summary[kpi].tdk++;
             }
         });
 
-        // Update Tabel Ringkasan
-        let htmlRingkasan = "";
-        let grandTotal = 0;
-        for (let key in stats) {
-            htmlRingkasan += `<tr><td>${key}</td><td class="text-center">${stats[key].total}</td></tr>`;
-            grandTotal += stats[key].total;
+        // Tampilkan Tabel 1
+        let html1 = ""; let gTotal = 0;
+        for (let key in summary) {
+            html1 += `<tr><td>${key}</td><td class="text-center">${summary[key].total}</td></tr>`;
+            gTotal += summary[key].total;
         }
-        $('#tabelRingkasan').html(htmlRingkasan);
-        $('#grandTotal').text(grandTotal);
+        $('#tabelRingkasan').html(html1);
+        $('#grandTotal').text(gTotal);
 
-        // Update Tabel Detail
-        let htmlDetail = "";
-        for (let key in stats) {
-            htmlDetail += `
-                <tr>
-                    <td class="text-start">${key}</td>
-                    <td>${stats[key].hr}</td>
-                    <td>${stats[key].hw}</td>
-                    <td>${stats[key].tdk}</td>
-                </tr>`;
+        // Tampilkan Tabel 2
+        let html2 = "";
+        for (let key in summary) {
+            html2 += `<tr><td class="text-start">${key}</td><td>${summary[key].hr}</td><td>${summary[key].hw}</td><td>${summary[key].tdk}</td></tr>`;
         }
-        $('#tabelDetail').html(htmlDetail);
+        $('#tabelDetail').html(html2);
     }
 
-    // Event saat filter diubah
-    $('#filterRuangan').on('change', function() {
-        prosesData($(this).val());
-    });
-
+    $('#filterRuangan').change(function() { updateDashboard($(this).val()); });
     $(document).ready(init);
 </script>
 </body>
