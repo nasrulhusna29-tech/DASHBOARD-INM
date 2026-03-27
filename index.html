@@ -84,3 +84,14 @@
             },
             error: function() {
                 $('#loader').html('<div class="alert alert-danger">Gagal menghubungi Google Sheets. Pastikan link sudah di-Publish.</div>');
+            }
+        });
+    }
+
+    // Jalankan saat halaman dibuka
+    $(document).ready(function() {
+        loadDataKeTabel();
+    });
+</script>
+</body>
+</html>
